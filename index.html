@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Repartix™ — Tu copiloto de reparto</title>
+<meta name="description" content="Repartix: ganancias, ahorro, zonas inteligentes, analizador de pedidos con IA y retos para repartidores multi-app. Independiente de Rappi, Uber Eats y PedidosYa.">
+<meta property="og:title" content="Repartix™ — Tu copiloto de reparto">
+<meta property="og:description" content="Analizá cada pedido, encontrá tus zonas calientes y ganá el reto semanal del peor pedido.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#07090f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#07090f; --bg2:#0c1018; --card:rgba(255,255,255,.045); --card2:rgba(255,255,255,.08);
+  --line:rgba(255,255,255,.09); --tx:#eef2f8; --tx2:#8b94a7; --tx3:#5a6376;
+  --lime:#c6f34a; --lime-d:#9ec724; --vio:#8b7bff; --amber:#ffb454; --red:#ff5d6c; --cyan:#4ad9e8;
+  --r:18px; --r2:12px;
+  --sh:0 10px 30px rgba(0,0,0,.45);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;background:
+  radial-gradient(700px 400px at 85% -5%,rgba(139,123,255,.14),transparent 60%),
+  radial-gradient(600px 380px at -10% 15%,rgba(198,243,74,.08),transparent 60%);pointer-events:none;z-index:0}
+h1,h2,h3,.disp{font-family:Sora,Inter,sans-serif}
+.mono{font-family:'IBM Plex Mono',monospace}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--tx);background:var(--bg2);border:1px solid var(--line);border-radius:var(--r2);padding:10px 12px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--lime)}
+::placeholder{color:var(--tx3)}
+img{max-width:100%}
+
+.app{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:14px 14px 110px}
+@media(min-width:768px){.app{padding:22px 24px 40px}}
+
+/* Header */
+.hdr{display:flex;align-items:center;gap:12px;padding:8px 2px 16px}
+.logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--lime),var(--lime-d));display:grid;place-items:center;box-shadow:0 4px 18px rgba(198,243,74,.35);flex-shrink:0}
+.logo svg{width:24px;height:24px}
+.hdr h1{font-size:19px;font-weight:800;letter-spacing:-.02em}
+.hdr h1 span{color:var(--lime)}
+.hdr .sub{font-size:11px;color:var(--tx2)}
+.hdr-right{margin-left:auto;text-align:right}
+.clock-time{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;letter-spacing:.02em}
+.clock-time small{font-size:12px;color:var(--lime)}
+.clock-date{font-size:10.5px;color:var(--tx2);text-transform:capitalize}
+.clock-greet{font-size:11px;color:var(--vio)}
+
+/* Nav */
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:60;display:flex;justify-content:space-around;background:rgba(10,13,20,.85);backdrop-filter:blur(18px);border-top:1px solid var(--line);padding:8px 4px calc(8px + env(safe-area-inset-bottom))}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--tx2);padding:4px 8px;border-radius:10px;transition:.2s;min-width:56px}
+.tab .ic{font-size:18px;line-height:1}
+.tab.on{color:var(--lime)}
+.tab.on .ic{transform:translateY(-2px)}
+@media(min-width:768px){
+  .tabs{position:sticky;top:12px;bottom:auto;justify-content:flex-start;gap:6px;border:1px solid var(--line);border-radius:16px;margin-bottom:18px;padding:8px}
+  .tab{flex-direction:row;font-size:13px;padding:8px 14px}
+  .tab.on{background:var(--card2)}
+}
+
+.view{display:none;animation:fadeUp .35s ease}
+.view.on{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* Cards & grid */
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(2,1fr)}
+.g4{grid-template-columns:repeat(2,1fr)}
+@media(min-width:768px){.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;backdrop-filter:blur(10px);box-shadow:var(--sh)}
+.card h3{font-size:13px;color:var(--tx2);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.kpi{font-size:24px;font-weight:800;font-family:Sora}
+.kpi small{font-size:12px;color:var(--tx2);font-weight:400}
+.kpi.lime{color:var(--lime)} .kpi.vio{color:var(--vio)} .kpi.amber{color:var(--amber)} .kpi.cyan{color:var(--cyan)}
+.sub2{font-size:11px;color:var(--tx2);margin-top:3px}
+.sec{margin:22px 0 10px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}
+.sec .ln{flex:1;height:1px;background:var(--line)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--lime),var(--lime-d));color:#0a0f05;font-weight:700;border-radius:14px;padding:12px 18px;transition:.15s;position:relative;overflow:hidden}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:var(--card2);color:var(--tx);border:1px solid var(--line)}
+.btn.red{background:linear-gradient(135deg,#ff5d6c,#d63a52);color:#fff}
+.btn.sm{padding:8px 12px;font-size:13px;border-radius:11px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--card2);border:1px solid var(--line)}
+.chip.lime{color:var(--lime);border-color:rgba(198,243,74,.35)}
+.chip.red{color:var(--red);border-color:rgba(255,93,108,.35)}
+.chip.vio{color:var(--vio);border-color:rgba(139,123,255,.35)}
+.chip.amber{color:var(--amber);border-color:rgba(255,180,84,.35)}
+
+.bar{height:8px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--lime-d),var(--lime));width:0;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+
+table.t{width:100%;border-collapse:collapse;font-size:12.5px}
+table.t th{text-align:left;color:var(--tx2);font-weight:600;padding:8px 6px;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+table.t td{padding:9px 6px;border-bottom:1px solid rgba(255,255,255,.05)}
+.scr{overflow-x:auto}
+
+/* Analyzer verdict */
+.verdict{border-radius:var(--r);padding:20px;text-align:center;border:1px solid var(--line);margin-top:12px}
+.verdict .big{font-size:34px;font-weight:800;font-family:Sora;letter-spacing:-.02em}
+.verdict .score{font-family:'IBM Plex Mono';font-size:15px;margin:4px 0 10px}
+.verdict.acc{background:linear-gradient(160deg,rgba(198,243,74,.16),rgba(198,243,74,.04));border-color:rgba(198,243,74,.4)}
+.verdict.acc .big{color:var(--lime)}
+.verdict.rej{background:linear-gradient(160deg,rgba(255,93,108,.16),rgba(255,93,108,.04));border-color:rgba(255,93,108,.4)}
+.verdict.rej .big{color:var(--red)}
+.reasons{text-align:left;font-size:13px;color:var(--tx2);display:grid;gap:5px;margin-top:8px}
+
+/* Map */
+#map{height:340px;border-radius:var(--r);border:1px solid var(--line);z-index:1}
+.leaflet-container{background:#0c1018;font:inherit}
+
+/* Community / retos */
+.post{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.post .ph{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.ava{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--vio),var(--cyan));display:grid;place-items:center;font-weight:800;font-size:14px;color:#0a0f05}
+.post img.evid{width:100%;border-radius:12px;margin-top:8px;border:1px solid var(--line)}
+.vote{display:flex;gap:8px;margin-top:10px}
+.reto-card{background:linear-gradient(150deg,rgba(139,123,255,.18),rgba(139,123,255,.03));border:1px solid rgba(139,123,255,.4)}
+.prize{font-size:26px;font-weight:800;color:var(--vio);font-family:Sora}
+
+/* Gamification */
+.lvl-ring{display:flex;align-items:center;gap:14px}
+.mission{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:var(--r2);margin-bottom:8px;background:var(--bg2)}
+.mission.done{border-color:rgba(198,243,74,.4)}
+.badge{display:inline-flex;flex-direction:column;align-items:center;gap:4px;width:74px;text-align:center;font-size:10px;color:var(--tx2);opacity:.35}
+.badge.won{opacity:1;color:var(--tx)}
+.badge .bi{font-size:26px}
+.badges{display:flex;flex-wrap:wrap;gap:8px}
+
+/* Toast + confetti */
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(20px);background:#141a26;border:1px solid var(--line);border-radius:14px;padding:12px 18px;font-size:13px;font-weight:600;opacity:0;transition:.3s;z-index:99;box-shadow:var(--sh);max-width:92vw}
+.toast.on{opacity:1;transform:translateX(-50%)}
+canvas#cf{position:fixed;inset:0;pointer-events:none;z-index:98}
+
+.modal{position:fixed;inset:0;background:rgba(4,6,10,.75);backdrop-filter:blur(6px);display:none;place-items:center;z-index:80;padding:16px}
+.modal.on{display:grid}
+.modal .box{background:var(--bg2);border:1px solid var(--line);border-radius:20px;padding:20px;max-width:480px;width:100%;max-height:88vh;overflow-y:auto}
+
+.field{margin-bottom:10px}
+.field label{display:block;font-size:11.5px;color:var(--tx2);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.zone-row{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid rgba(255,255,255,.05)}
+.zone-rank{font-family:'IBM Plex Mono';font-weight:600;color:var(--tx3);width:24px}
+.est{font-size:10px;color:var(--amber)}
+
+footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-size:11px;color:var(--tx3);text-align:center;line-height:1.7}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="cf"></canvas>
+<div class="app">
+
+<header class="hdr">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M4 17l5-11 4 7 3-4 4 8" stroke="#0a0f05" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+  <div><h1>Repartix<span>™</span></h1><div class="sub">Tu copiloto de reparto · by url.fx</div></div>
+  <div class="hdr-right">
+    <div class="clock-time" id="clkT">--:--<small>:--</small></div>
+    <div class="clock-date" id="clkD">—</div>
+    <div class="clock-greet" id="clkG"></div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-v="home"><span class="ic">📊</span>Panel</button>
+  <button class="tab" data-v="analyze"><span class="ic">🤖</span>Analizar</button>
+  <button class="tab" data-v="zones"><span class="ic">🗺️</span>Zonas</button>
+  <button class="tab" data-v="game"><span class="ic">🏆</span>Retos</button>
+  <button class="tab" data-v="chat"><span class="ic">💬</span>Coach</button>
+  <button class="tab" data-v="comm"><span class="ic">👥</span>Comunidad</button>
+  <button class="tab" data-v="cfg"><span class="ic">⚙️</span>Ajustes</button>
+</nav>
+
+<!-- ================= HOME ================= -->
+<section class="view on" id="v-home">
+  <div class="grid g2" style="margin-bottom:12px">
+    <div class="card"><h3>💵 Hoy</h3><div class="kpi lime" id="kDay">$0</div><div class="sub2" id="kDayOrders">0 pedidos</div></div>
+    <div class="card"><h3>📅 Semana</h3><div class="kpi" id="kWeek">$0</div><div class="sub2" id="kWeekAvg">—</div></div>
+    <div class="card"><h3>🗓️ Mes</h3><div class="kpi" id="kMonth">$0</div><div class="sub2" id="kMonthProj">—</div></div>
+    <div class="card"><h3>📈 Año</h3><div class="kpi" id="kYear">$0</div><div class="sub2" id="kYearN">—</div></div>
+  </div>
+  <div class="grid g3" style="margin-bottom:12px">
+    <div class="card"><h3>⏱ $/hora</h3><div class="kpi cyan" id="kPerH">$0</div></div>
+    <div class="card"><h3>📦 $/pedido</h3><div class="kpi cyan" id="kPerO">$0</div></div>
+    <div class="card"><h3>🚴 $/km</h3><div class="kpi cyan" id="kPerK">$0</div></div>
+  </div>
+  <div class="grid g4" style="margin-bottom:12px">
+    <div class="card"><h3>🥇 Récord día</h3><div class="kpi amber" id="rDay">$0</div><div class="sub2" id="rDayD">—</div></div>
+    <div class="card"><h3>🥇 Récord semana</h3><div class="kpi amber" id="rWeek">$0</div></div>
+    <div class="card"><h3>🥇 Récord mes</h3><div class="kpi amber" id="rMonth">$0</div></div>
+    <div class="card"><h3>👑 Histórico</h3><div class="kpi amber" id="rAll">$0</div><div class="sub2" id="rAllN">total acumulado</div></div>
+  </div>
+
+  <div class="sec">🧠 Autopiloto IA<span class="ln"></span><span class="chip vio" id="apConf">confianza —</span></div>
+  <div class="card" id="apCard">
+    <div id="apMsg" style="font-size:14.5px;line-height:1.55">Cargá tu primer pedido para que el autopiloto empiece a aprender.</div>
+    <div class="grid g3" style="margin-top:12px">
+      <div><div class="sub2">Predicción hoy</div><div class="kpi" style="font-size:17px" id="apDay">—</div></div>
+      <div><div class="sub2">Semana</div><div class="kpi" style="font-size:17px" id="apWeek">—</div></div>
+      <div><div class="sub2">Mes</div><div class="kpi" style="font-size:17px" id="apMonth">—</div></div>
+    </div>
+  </div>
+
+  <div class="sec">🐷 Ahorros<span class="ln"></span></div>
+  <div class="card">
+    <div class="grid g4">
+      <div><div class="sub2">Hoy</div><div class="kpi lime" style="font-size:19px" id="sDay">$0</div></div>
+      <div><div class="sub2">Semana</div><div class="kpi" style="font-size:19px" id="sWeek">$0</div></div>
+      <div><div class="sub2">Mes</div><div class="kpi" style="font-size:19px" id="sMonth">$0</div></div>
+      <div><div class="sub2">Año</div><div class="kpi" style="font-size:19px" id="sYear">$0</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:14px">
+      <div class="bar" style="flex:1"><i id="sBar"></i></div>
+      <span class="chip lime" id="sGrow">+0%</span>
+    </div>
+    <div class="frow" style="margin-top:12px">
+      <div class="field"><label>Sumar ahorro ($)</label><input type="number" id="sAdd" min="0" placeholder="0"></div>
+      <div class="field"><label>Meta mensual ($)</label><input type="number" id="sGoal" min="0" placeholder="100000"></div>
+    </div>
+    <button class="btn sm" id="sBtn">Guardar ahorro</button>
+  </div>
+
+  <div class="sec">📉 Últimos 14 días<span class="ln"></span><button class="btn ghost sm" id="csvBtn">⬇ Exportar CSV</button></div>
+  <div class="card"><canvas id="chDays" height="150"></canvas></div>
+
+  <div class="sec">📱 Por plataforma<span class="ln"></span></div>
+  <div class="card scr"><table class="t" id="tPlat"><thead><tr><th>App</th><th>Pedidos</th><th>Ganancia</th><th>$/pedido</th><th>$/km</th></tr></thead><tbody></tbody></table></div>
+
+  <div class="sec">➕ Registrar pedido<span class="ln"></span></div>
+  <div class="card">
+    <div class="frow">
+      <div class="field"><label>App</label><select id="oApp"><option>Rappi</option><option>PedidosYa</option><option>Uber Eats</option><option>Mercado Libre</option><option>DiDi Food</option><option>Cabify</option><option>Otra</option></select></div>
+      <div class="field"><label>Pago ($)</label><input type="number" id="oPay" min="0" inputmode="decimal"></div>
+      <div class="field"><label>Km totales</label><input type="number" id="oKm" min="0" step="0.1" inputmode="decimal"></div>
+      <div class="field"><label>Minutos</label><input type="number" id="oMin" min="0" inputmode="numeric"></div>
+      <div class="field"><label>Barrio / zona</label><input id="oZone" list="zonesDL" placeholder="Palermo"><datalist id="zonesDL"></datalist></div>
+      <div class="field"><label>Espera (min)</label><input type="number" id="oWait" min="0" value="0"></div>
+    </div>
+    <button class="btn" id="oBtn" style="width:100%">Guardar pedido ✓</button>
+  </div>
+</section>
+
+<!-- ================= ANALYZE ================= -->
+<section class="view" id="v-analyze">
+  <div class="sec" style="margin-top:0">🤖 Analizador de pedidos<span class="ln"></span><span class="chip vio" id="anMode">motor local</span></div>
+  <div class="card">
+    <div class="frow">
+      <div class="field"><label>Pago ofrecido ($)</label><input type="number" id="aPay" min="0"></div>
+      <div class="field"><label>Km al comercio</label><input type="number" id="aKm1" min="0" step="0.1"></div>
+      <div class="field"><label>Km al cliente</label><input type="number" id="aKm2" min="0" step="0.1"></div>
+      <div class="field"><label>Espera estimada (min)</label><input type="number" id="aWait" min="0" value="5"></div>
+      <div class="field"><label>Zona destino</label><input id="aZone" list="zonesDL" placeholder="Belgrano"></div>
+      <div class="field"><label>Clima</label><select id="aWx"><option value="1">☀️ Despejado</option><option value="1.15">🌧 Lluvia</option><option value="1.3">⛈ Tormenta</option><option value="0.95">🥵 Calor extremo</option></select></div>
+      <div class="field"><label>Demanda visible</label><select id="aDem"><option value="1.1">🔥 Alta</option><option value="1" selected>Normal</option><option value=".85">🧊 Baja</option></select></div>
+      <div class="field"><label>Vehículo</label><select id="aVeh"><option value="bici">🚲 Bicicleta</option><option value="moto">🏍 Moto</option></select></div>
+    </div>
+    <button class="btn" id="aBtn" style="width:100%">Analizar pedido</button>
+    <div id="aOut"></div>
+  </div>
+</section>
+
+<!-- ================= ZONES ================= -->
+<section class="view" id="v-zones">
+  <div class="sec" style="margin-top:0">🗺️ Mapa premium CABA<span class="ln"></span></div>
+  <div id="map"></div>
+  <div class="grid g2" style="margin-top:12px">
+    <div class="card"><h3>🔥 Top zonas (tu historial)</h3><div id="zTop"></div></div>
+    <div class="card"><h3>⚡ Menor espera · 🚴 Mejor $/km</h3><div id="zBest"></div></div>
+  </div>
+  <div class="sec">📋 Detalle de zonas<span class="ln"></span></div>
+  <div class="card scr"><table class="t" id="tZones"><thead><tr><th>Zona</th><th>Demanda</th><th>Ped/h</th><th>$ prom</th><th>$/km</th><th>Horario ideal</th><th>IA</th></tr></thead><tbody></tbody></table></div>
+</section>
+
+<!-- ================= GAME ================= -->
+<section class="view" id="v-game">
+  <div class="card" style="margin-bottom:12px">
+    <div class="lvl-ring">
+      <svg width="76" height="76" viewBox="0 0 76 76"><circle cx="38" cy="38" r="32" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="7"/><circle id="xpRing" cx="38" cy="38" r="32" fill="none" stroke="url(#lg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201" transform="rotate(-90 38 38)"/><defs><linearGradient id="lg"><stop offset="0" stop-color="#9ec724"/><stop offset="1" stop-color="#c6f34a"/></linearGradient></defs><text x="38" y="43" text-anchor="middle" fill="#eef2f8" font-size="19" font-weight="800" id="lvlN">1</text></svg>
+      <div style="flex:1">
+        <div style="font-weight:800;font-size:16px">Nivel <span id="lvlN2">1</span> · <span id="lvlTitle">Novato</span></div>
+        <div class="sub2"><span id="xpNow">0</span> / <span id="xpNext">100</span> XP · 🪙 <span id="coins">0</span> monedas · 🔥 racha <span id="streak">0</span>d</div>
+        <div class="bar" style="margin-top:6px"><i id="xpBar"></i></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn ghost sm" id="boxBtn">🎁 Caja diaria</button>
+      <button class="btn ghost sm" id="wheelBtn">🎡 Ruleta (200🪙)</button>
+    </div>
+  </div>
+
+  <div class="sec" style="margin-top:0">🎯 Misiones de hoy<span class="ln"></span></div>
+  <div id="missions"></div>
+
+  <div class="sec">🏁 Desafíos<span class="ln"></span></div>
+  <div id="challenges"></div>
+
+  <div class="sec">🏅 Insignias<span class="ln"></span><span class="chip" id="badgeCount">0/0</span></div>
+  <div class="card"><div class="badges" id="badges"></div></div>
+</section>
+
+<!-- ================= CHAT COACH ================= -->
+<section class="view" id="v-chat">
+  <div class="sec" style="margin-top:0">💬 Coach IA<span class="ln"></span><span class="chip vio" id="chMode">motor local</span></div>
+  <div class="card" style="padding:10px">
+    <div id="chatLog" style="max-height:52vh;overflow-y:auto;display:grid;gap:8px;padding:6px"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 4px">
+      <button class="btn ghost sm chq" data-q="Organizame la semana">📅 Organizame la semana</button>
+      <button class="btn ghost sm chq" data-q="¿Cuál es mi mejor horario?">⏰ Mejor horario</button>
+      <button class="btn ghost sm chq" data-q="¿Cuál es mi mejor zona?">📍 Mejor zona</button>
+      <button class="btn ghost sm chq" data-q="¿Cómo voy con la meta?">🎯 Meta</button>
+    </div>
+    <div style="display:flex;gap:8px;padding:4px">
+      <input id="chIn" placeholder="Preguntale al coach…" style="flex:1">
+      <button class="btn sm" id="chSend">➤</button>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMMUNITY ================= -->
+<section class="view" id="v-comm">
+  <div class="card" id="authBar" style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <div style="flex:1;min-width:160px"><b id="authTxt">Comunidad global 🌎</b><div class="sub2" id="authSub">Iniciá sesión para publicar, votar y comentar con todos.</div></div>
+    <button class="btn sm" id="gLogin">Entrar con Google</button>
+    <button class="btn ghost sm" id="mLogin">✉️ Email</button>
+    <button class="btn ghost sm" id="outBtn" style="display:none">Salir</button>
+  </div>
+  <div class="card reto-card" style="margin-bottom:14px">
+    <h3 style="color:var(--vio)">🏆 Reto semanal · El peor pedido</h3>
+    <div class="prize" id="retoPrize">$10.000</div>
+    <div class="sub2">Subí la captura del pedido más miserable de la semana. El más votado gana. Cierra domingo 23:59.</div>
+    <div class="sub2 mono" id="retoCount" style="margin-top:6px;color:var(--amber)"></div>
+    <div style="margin-top:12px">
+      <div class="frow">
+        <div class="field"><label>Descripción</label><input id="wpDesc" placeholder="$900 por 8km bajo lluvia…"></div>
+        <div class="field"><label>Foto / captura</label><input type="file" id="wpImg" accept="image/*"></div>
+      </div>
+      <button class="btn" id="wpBtn" style="width:100%">Participar en el reto 📸</button>
+    </div>
+  </div>
+  <div class="sec" style="margin-top:0">📰 Muro<span class="ln"></span></div>
+  <div class="field"><textarea id="postTxt" rows="2" placeholder="Compartí un dato, una zona caliente, un pedido…"></textarea></div>
+  <div style="display:flex;gap:8px;margin-bottom:14px"><button class="btn sm" id="postBtn">Publicar</button><input type="file" id="postImg" accept="image/*" style="display:none"><button class="btn ghost sm" id="postImgBtn">📷 Foto</button><span class="sub2" id="postImgName"></span></div>
+  <div id="feed"></div>
+  <div class="sub2" style="text-align:center;margin-top:8px">La comunidad vive en este dispositivo. La versión con servidor compartido llega con la app móvil.</div>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+<section class="view" id="v-cfg">
+  <div class="card" style="margin-bottom:12px">
+    <h3>👤 Perfil</h3>
+    <div class="frow">
+      <div class="field"><label>Nombre / alias</label><input id="cName" placeholder="Uri"></div>
+      <div class="field"><label>Objetivo semanal ($)</label><input type="number" id="cGoal" min="0"></div>
+    </div>
+    <button class="btn sm" id="cSave">Guardar</button>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>🤖 IA avanzada (opcional)</h3>
+    <div class="sub2" style="margin-bottom:8px">El motor local funciona sin internet. Si tenés una API key de Anthropic, el analizador y el autopiloto usan Claude para explicaciones más finas. La clave se guarda solo en tu dispositivo.</div>
+    <div class="field"><label>Anthropic API key</label><input id="cKey" type="password" placeholder="sk-ant-…"></div>
+    <button class="btn ghost sm" id="cKeySave">Guardar clave</button>
+  </div>
+  <div class="card" style="margin-bottom:12px">
+    <h3>🧹 Datos</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost sm" id="expBtn">⬇ Exportar respaldo</button>
+      <button class="btn ghost sm" id="impBtn">⬆ Importar</button><input type="file" id="impFile" accept="application/json" style="display:none">
+      <button class="btn red sm" id="wipeBtn">Borrar todo</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>📲 App móvil (preparado)</h3>
+    <div class="sub2" style="line-height:1.7">Arquitectura lista para Android/iOS: módulos <span class="mono">NotifBridge</span> (notificaciones), <span class="mono">BgService</span> (segundo plano) y <span class="mono">NotifAnalyzer</span> (lectura de notificaciones <b>solo con permiso explícito del usuario</b>) están definidos como interfaces y esperan la capa nativa. No hay automatización que viole políticas de Android ni de las plataformas.</div>
+  </div>
+  <footer>
+    Repartix™ · Hecho por url.fx · Buenos Aires 🇦🇷<br>
+    Repartix es independiente. Rappi, Uber Eats, PedidosYa, Mercado Libre, DiDi y Cabify son marcas de sus respectivos dueños.<br>
+    Las cifras de zonas sin historial son <b>estimaciones</b> y se marcan como tales. Repartix nunca inventa datos como reales.
+  </footer>
+</section>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- Modal ruleta / caja -->
+<div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
+
+<datalist id="zonesDL2"></datalist>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+'use strict';
+/* ============ STATE ============ */
+const TZ='America/Argentina/Buenos_Aires';
+const KEY='repartix_state_v3';
+const $=id=>document.getElementById(id);
+const fmt=n=>'$'+Math.round(n||0).toLocaleString('es-AR');
+const todayStr=()=>new Intl.DateTimeFormat('en-CA',{timeZone:TZ}).format(new Date());
+const nowBA=()=>new Date(new Date().toLocaleString('en-US',{timeZone:TZ}));
+
+const SEED_ZONES=['Belgrano','Palermo','Recoleta','Caballito','Villa Crespo','Colegiales','Núñez','Puerto Madero','Microcentro','Almagro','Flores','Villa Urquiza','Devoto','Chacarita','Barrio Norte'];
+const ZONE_COORDS={'Belgrano':[-34.562,-58.457],'Palermo':[-34.578,-58.426],'Recoleta':[-34.588,-58.393],'Caballito':[-34.619,-58.44],'Villa Crespo':[-34.599,-58.438],'Colegiales':[-34.573,-58.449],'Núñez':[-34.545,-58.463],'Puerto Madero':[-34.611,-58.363],'Microcentro':[-34.604,-58.379],'Almagro':[-34.61,-58.42],'Flores':[-34.628,-58.463],'Villa Urquiza':[-34.573,-58.487],'Devoto':[-34.601,-58.513],'Chacarita':[-34.587,-58.454],'Barrio Norte':[-34.595,-58.402]};
+
+let S=load();
+function load(){
+  let s=null;
+  try{s=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  if(!s){ // migración desde versiones anteriores
+    for(const k of Object.keys(localStorage)){
+      if(/repartix|rappi/i.test(k)&&k!==KEY){
+        try{const old=JSON.parse(localStorage.getItem(k));
+          if(old&&(old.orders||old.pedidos)){s={orders:old.orders||old.pedidos||[]};break}
+        }catch(e){}
+      }
+    }
+  }
+  s=s||{};
+  return Object.assign({orders:[],savings:[],savGoal:100000,name:'',weekGoal:0,apiKey:'',
+    xp:0,coins:0,streak:0,lastActive:'',lastBox:'',badges:[],posts:[],retoEntries:[],
+    challengeClaimed:[]},s);
+}
+let saveT;
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('⚠️ Almacenamiento lleno — borrá fotos viejas')}},150)}
+
+/* ============ TOAST + CONFETTI ============ */
+let toastT;
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2600)}
+const cf=$('cf'),cx=cf.getContext('2d');let parts=[],cfRun=false;
+function confetti(){cf.width=innerWidth;cf.height=innerHeight;
+  for(let i=0;i<120;i++)parts.push({x:Math.random()*cf.width,y:-20-Math.random()*200,v:2+Math.random()*4,s:4+Math.random()*6,r:Math.random()*6.28,c:['#c6f34a','#8b7bff','#ffb454','#4ad9e8'][i%4]});
+  if(!cfRun){cfRun=true;requestAnimationFrame(cfTick)}}
+function cfTick(){cx.clearRect(0,0,cf.width,cf.height);parts=parts.filter(p=>p.y<cf.height+20);
+  for(const p of parts){p.y+=p.v;p.r+=.1;cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.fillStyle=p.c;cx.fillRect(-p.s/2,-p.s/2,p.s,p.s);cx.restore()}
+  if(parts.length)requestAnimationFrame(cfTick);else cfRun=false}
+
+/* ============ CLOCK ============ */
+function tickClock(){
+  const d=new Date();
+  const t=new Intl.DateTimeFormat('es-AR',{timeZone:TZ,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).formatToParts(d);
+  const g=k=>t.find(p=>p.type===k).value;
+  $('clkT').innerHTML=`${g('hour')}:${g('minute')}<small>:${g('second')}</small>`;
+  $('clkD').textContent=new Intl.DateTimeFormat('es-AR',{timeZone:TZ,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(d);
+  const h=+g('hour');
+  $('clkG').textContent=h<12?'🌅 Buenos días':h<19?'☀️ Buenas tardes':'🌙 Buenas noches';
+}
+setInterval(tickClock,1000);tickClock();
+
+/* ============ DERIVED STATS ============ */
+function isoWeek(dt){const d=new Date(Date.UTC(dt.getFullYear(),dt.getMonth(),dt.getDate()));const day=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-day);const y0=new Date(Date.UTC(d.getUTCFullYear(),0,1));return d.getUTCFullYear()+'-W'+String(Math.ceil((((d-y0)/864e5)+1)/7)).padStart(2,'0')}
+function stats(){
+  const now=nowBA(),td=todayStr(),wk=isoWeek(now),mo=td.slice(0,7),yr=td.slice(0,4);
+  const agg={day:0,dayN:0,week:0,month:0,year:0,all:0,n:0,km:0,min:0,byDay:{},byWeek:{},byMonth:{},byPlat:{},byZone:{}};
+  for(const o of S.orders){
+    const d=new Date(o.ts),ds=new Intl.DateTimeFormat('en-CA',{timeZone:TZ}).format(d);
+    const w=isoWeek(new Date(d.toLocaleString('en-US',{timeZone:TZ})));
+    agg.all+=o.pay;agg.n++;agg.km+=o.km||0;agg.min+=(o.min||0)+(o.wait||0);
+    agg.byDay[ds]=(agg.byDay[ds]||0)+o.pay;agg.byWeek[w]=(agg.byWeek[w]||0)+o.pay;agg.byMonth[ds.slice(0,7)]=(agg.byMonth[ds.slice(0,7)]||0)+o.pay;
+    if(ds===td){agg.day+=o.pay;agg.dayN++}
+    if(w===wk)agg.week+=o.pay;
+    if(ds.slice(0,7)===mo)agg.month+=o.pay;
+    if(ds.slice(0,4)===yr)agg.year+=o.pay;
+    const p=agg.byPlat[o.app]=agg.byPlat[o.app]||{n:0,pay:0,km:0};p.n++;p.pay+=o.pay;p.km+=o.km||0;
+    if(o.zone){const z=agg.byZone[o.zone]=agg.byZone[o.zone]||{n:0,pay:0,km:0,min:0,wait:0,hours:{}};
+      z.n++;z.pay+=o.pay;z.km+=o.km||0;z.min+=(o.min||0);z.wait+=(o.wait||0);
+      const h=new Date(d.toLocaleString('en-US',{timeZone:TZ})).getHours();z.hours[h]=(z.hours[h]||0)+1}
+  }
+  return agg;
+}
+
+/* ============ RENDER HOME ============ */
+let chart;
+function renderHome(){
+  const a=stats();
+  $('kDay').textContent=fmt(a.day);$('kDayOrders').textContent=a.dayN+' pedidos';
+  $('kWeek').textContent=fmt(a.week);
+  const days=Object.keys(a.byDay).length||1;
+  $('kWeekAvg').textContent='prom '+fmt(a.all/days)+'/día';
+  $('kMonth').textContent=fmt(a.month);
+  const dNow=nowBA();const dim=new Date(dNow.getFullYear(),dNow.getMonth()+1,0).getDate();
+  $('kMonthProj').textContent='proyección '+fmt(a.month/Math.max(1,dNow.getDate())*dim);
+  $('kYear').textContent=fmt(a.year);$('kYearN').textContent=a.n+' pedidos totales';
+  const hrs=a.min/60;
+  $('kPerH').textContent=hrs>0?fmt(a.all/hrs):'$0';
+  $('kPerO').textContent=a.n?fmt(a.all/a.n):'$0';
+  $('kPerK').textContent=a.km>0?fmt(a.all/a.km):'$0';
+  const bd=Object.entries(a.byDay).sort((x,y)=>y[1]-x[1])[0];
+  $('rDay').textContent=bd?fmt(bd[1]):'$0';$('rDayD').textContent=bd?bd[0]:'—';
+  const bw=Object.values(a.byWeek).sort((x,y)=>y-x)[0];$('rWeek').textContent=bw?fmt(bw):'$0';
+  const bm=Object.values(a.byMonth).sort((x,y)=>y-x)[0];$('rMonth').textContent=bm?fmt(bm):'$0';
+  $('rAll').textContent=fmt(a.all);
+
+  // autopilot
+  renderAutopilot(a);
+  // savings
+  renderSavings();
+  // chart 14 días
+  const labels=[],vals=[];
+  for(let i=13;i>=0;i--){const d=new Date(Date.now()-i*864e5);const ds=new Intl.DateTimeFormat('en-CA',{timeZone:TZ}).format(d);labels.push(ds.slice(5));vals.push(a.byDay[ds]||0)}
+  drawBars($('chDays'),labels,vals);
+  // plataformas
+  const tb=$('tPlat').querySelector('tbody');tb.innerHTML='';
+  const plats=Object.entries(a.byPlat).sort((x,y)=>y[1].pay-x[1].pay);
+  if(!plats.length)tb.innerHTML='<tr><td colspan="5" style="color:var(--tx3)">Sin pedidos todavía.</td></tr>';
+  for(const[name,p]of plats){const tr=document.createElement('tr');
+    tr.innerHTML=`<td><b>${esc(name)}</b></td><td>${p.n}</td><td>${fmt(p.pay)}</td><td>${fmt(p.pay/p.n)}</td><td>${p.km>0?fmt(p.pay/p.km):'—'}</td>`;tb.appendChild(tr)}
+  // datalist zonas
+  const dl=$('zonesDL');dl.innerHTML='';
+  const all=[...new Set([...SEED_ZONES,...Object.keys(a.byZone)])];
+  for(const z of all){const o=document.createElement('option');o.value=z;dl.appendChild(o)}
+}
+function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML}
+function drawBars(cv,labels,vals){
+  const dpr=devicePixelRatio||1,W=cv.clientWidth||600,H=150;cv.width=W*dpr;cv.height=H*dpr;
+  const c=cv.getContext('2d');c.scale(dpr,dpr);c.clearRect(0,0,W,H);
+  const max=Math.max(...vals,1),bw=W/vals.length;
+  vals.forEach((v,i)=>{const h=(v/max)*(H-30);
+    const g=c.createLinearGradient(0,H-h-18,0,H-18);g.addColorStop(0,'#c6f34a');g.addColorStop(1,'#3a4a12');
+    c.fillStyle=v?g:'rgba(255,255,255,.06)';
+    roundRect(c,i*bw+bw*.15,H-18-Math.max(h,3),bw*.7,Math.max(h,3),4);
+    c.fillStyle='#5a6376';c.font='9px IBM Plex Mono';c.textAlign='center';
+    if(i%2===0)c.fillText(labels[i],i*bw+bw/2,H-5)});
+}
+function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.fill()}
+
+/* ============ SAVINGS ============ */
+function renderSavings(){
+  const td=todayStr(),wk=isoWeek(nowBA()),mo=td.slice(0,7),yr=td.slice(0,4);
+  let d=0,w=0,m=0,y=0,prevM=0;
+  const pm=new Date(nowBA());pm.setMonth(pm.getMonth()-1);
+  const pmS=pm.toISOString().slice(0,7);
+  for(const s of S.savings){
+    if(s.date===td)d+=s.amt;
+    if(isoWeek(new Date(s.date+'T12:00:00'))===wk)w+=s.amt;
+    if(s.date.slice(0,7)===mo)m+=s.amt;
+    if(s.date.slice(0,7)===pmS)prevM+=s.amt;
+    if(s.date.slice(0,4)===yr)y+=s.amt;
+  }
+  $('sDay').textContent=fmt(d);$('sWeek').textContent=fmt(w);$('sMonth').textContent=fmt(m);$('sYear').textContent=fmt(y);
+  $('sBar').style.width=Math.min(100,m/Math.max(1,S.savGoal)*100)+'%';
+  const gr=prevM>0?Math.round((m-prevM)/prevM*100):(m>0?100:0);
+  $('sGrow').textContent=(gr>=0?'+':'')+gr+'%';
+  $('sGoal').value=S.savGoal||'';
+}
+$('sBtn').onclick=()=>{
+  const v=+$('sAdd').value||0,g=+$('sGoal').value;
+  if(g>0)S.savGoal=g;
+  if(v>0){S.savings.push({date:todayStr(),amt:v});addXP(10,'Ahorro registrado');$('sAdd').value=''}
+  save();renderSavings();toast('🐷 Ahorro actualizado');
+};
+
+/* ============ ORDERS ============ */
+$('oBtn').onclick=()=>{
+  const pay=+$('oPay').value,km=+$('oKm').value||0,min=+$('oMin').value||0,wait=+$('oWait').value||0;
+  if(!(pay>0))return toast('⚠️ Ingresá el pago');
+  S.orders.push({ts:Date.now(),app:$('oApp').value,pay,km,min,wait,zone:$('oZone').value.trim()});
+  ['oPay','oKm','oMin','oZone'].forEach(i=>$(i).value='');$('oWait').value=0;
+  bumpStreak();addXP(25,'Pedido registrado');save();renderAll();toast('✓ Pedido guardado · +25 XP');
+};
+
+/* ============ ANALYZER ============ */
+function analyzeLocal(inp,agg){
+  const km=inp.km1+inp.km2, gross=inp.pay;
+  const perKm=km>0?gross/km:gross;
+  const speed=inp.veh==='bici'?11:22; // km/h urbanos realistas
+  const travelMin=km/speed*60, totalMin=travelMin+inp.wait;
+  const perH=totalMin>0?gross/(totalMin/60):gross;
+  const perMin=totalMin>0?gross/totalMin:gross;
+  const hist=agg.n?agg.all/Math.max(1,agg.km):260; // baseline $/km del propio historial
+  const histH=agg.min>0?agg.all/(agg.min/60):4000;
+  let score=50;
+  score+=Math.max(-25,Math.min(25,(perKm/hist-1)*60));
+  score+=Math.max(-20,Math.min(20,(perH/histH-1)*45));
+  score-=Math.min(15,inp.wait*1.2);
+  score*=inp.wx; score*=inp.dem;
+  const z=agg.byZone[inp.zone];
+  let zoneNote=null;
+  if(z&&z.n>=3){const zk=z.pay/Math.max(1,z.km);score+=zk>hist?6:-6;
+    zoneNote=`Zona ${inp.zone}: ${z.n} pedidos tuyos, $/km ${fmt(zk)} (${zk>hist?'sobre':'bajo'} tu promedio)`;}
+  else if(inp.zone)zoneNote=`Zona ${inp.zone}: sin historial suficiente — estimación, faltan datos`;
+  const wear=inp.veh==='bici'?km*0.6:km*0.2;
+  score-=wear*0.4;
+  score=Math.round(Math.max(0,Math.min(100,score)));
+  const tier=score>=85?['🟢 Excelente','acc']:score>=72?['🟢 Muy bueno','acc']:score>=58?['🟡 Bueno','acc']:score>=45?['🟠 Regular','rej']:score>=30?['🔴 Malo','rej']:['⚫ Rechazar','rej'];
+  const reasons=[
+    `💰 ${fmt(perKm)}/km vs tu promedio ${fmt(hist)}/km`,
+    `⏱ ${fmt(perH)}/hora estimada (${Math.round(totalMin)} min totales, ${fmt(perMin)}/min)`,
+    `🚦 Espera ${inp.wait} min · viaje ~${Math.round(travelMin)} min`,
+    inp.wx>1?'🌧 Clima adverso: sube la demanda pero también el riesgo':'☀️ Clima sin penalidad',
+    `🔮 Probabilidad de otro pedido al terminar: ${Math.round(Math.min(92,35+(inp.dem-0.85)*180))}% (según demanda declarada)`,
+    inp.veh==='bici'?`🚲 Desgaste estimado: ${km.toFixed(1)} km de pedaleo`:`🏍 Combustible/desgaste sobre ${km.toFixed(1)} km`,
+  ];
+  if(zoneNote)reasons.push('📍 '+zoneNote);
+  return {score,tier,accept:score>=58,reasons,perKm,perH};
+}
+$('aBtn').onclick=async()=>{
+  const inp={pay:+$('aPay').value||0,km1:+$('aKm1').value||0,km2:+$('aKm2').value||0,
+    wait:+$('aWait').value||0,zone:$('aZone').value.trim(),wx:+$('aWx').value,dem:+$('aDem').value,veh:$('aVeh').value};
+  if(!(inp.pay>0))return toast('⚠️ Ingresá el pago ofrecido');
+  const r=analyzeLocal(inp,stats());
+  let extra='';
+  if(S.apiKey){
+    $('anMode').textContent='consultando IA…';
+    extra=await askClaude(`Sos copiloto de un repartidor en CABA. Pedido: $${inp.pay}, ${inp.km1+inp.km2}km, espera ${inp.wait}min, zona ${inp.zone||'?'}. Score local ${r.score}/100. En 2 frases rioplatenses, ¿aceptar o rechazar y por qué?`);
+    $('anMode').textContent=extra?'IA Claude':'motor local';
+  }
+  $('aOut').innerHTML=`<div class="verdict ${r.tier[1]}">
+    <div class="big">${r.accept?'ACEPTAR':'RECHAZAR'}</div>
+    <div class="score">${r.tier[0]} · ${r.score}/100</div>
+    <div class="reasons">${r.reasons.map(x=>'<div>'+esc(x)+'</div>').join('')}${extra?'<div style="color:var(--vio)">🤖 '+esc(extra)+'</div>':''}</div>
+  </div>`;
+  addXP(5,'Análisis');save();
+};
+async function askClaude(prompt){
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)return '';
+    const d=await res.json();
+    return (d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join(' ').trim();
+  }catch(e){return ''}
+}
+
+/* ============ AUTOPILOT ============ */
+function renderAutopilot(a){
+  const h=nowBA().getHours(),day=nowBA().getDay();
+  const peak=(h>=11&&h<15)||(h>=19&&h<23);
+  const zones=Object.entries(a.byZone).map(([n,z])=>({n,score:z.pay/Math.max(1,z.km)*Math.log2(z.n+1)})).sort((x,y)=>y.score-x.score);
+  const best=zones[0];
+  const conf=Math.min(95,20+a.n*2);
+  $('apConf').textContent='confianza '+conf+'%';
+  let msg;
+  if(a.n<5)msg='📥 Cargá al menos 5 pedidos para recomendaciones con datos reales. Mientras tanto: '+(peak?'<b>conectate ahora</b>, es franja pico en CABA (estimación).':'franja valle — aprovechá para descansar o moverte a una zona gastronómica (estimación).');
+  else{
+    msg=(peak?'🔥 <b>Conectate ahora</b> — franja pico. ':'🧊 Franja valle — bajá el ritmo o cambiá de barrio. ');
+    if(best)msg+=`Tu mejor zona por datos: <b>${esc(best.n)}</b> → ir ahí y esperar cerca de los comercios fuertes. `;
+    msg+=(day===0||day===6)?'Fin de semana: cenas largas, priorizá 20-23h.':'Día hábil: almuerzo de oficinas 12-14h manda.';
+  }
+  $('apMsg').innerHTML=msg;
+  const dAvg=a.all/Math.max(1,Object.keys(a.byDay).length);
+  $('apDay').textContent=a.n?fmt(dAvg):'—';
+  $('apWeek').textContent=a.n?fmt(dAvg*6):'—';
+  $('apMonth').textContent=a.n?fmt(dAvg*24):'—';
+}
+
+/* ============ ZONES ============ */
+let map,heatLayer=[];
+function renderZones(){
+  const a=stats();
+  const rows=[];
+  const allZ=[...new Set([...SEED_ZONES,...Object.keys(a.byZone)])];
+  for(const name of allZ){
+    const z=a.byZone[name];
+    if(z&&z.n>=2){
+      const hrs=Object.entries(z.hours).sort((x,y)=>y[1]-x[1])[0];
+      rows.push({name,est:false,dem:Math.min(100,z.n*8),ph:+(z.n/Math.max(1,(z.min+z.wait)/60)).toFixed(1),
+        avg:z.pay/z.n,pk:z.pay/Math.max(1,z.km),wait:z.wait/z.n,
+        hour:hrs?hrs[0]+':00-'+(+hrs[0]+2)+':00':'—',
+        ai:z.pay/Math.max(1,z.km)>(a.all/Math.max(1,a.km))?'✅ Priorizar':'↔️ Neutral'});
+    }else{
+      rows.push({name,est:true,dem:null,ph:null,avg:null,pk:null,wait:null,hour:'12-14 / 20-22 (est.)',ai:'📥 Faltan datos'});
+    }
+  }
+  rows.sort((x,y)=>(y.pk||0)-(x.pk||0)||(y.dem||0)-(x.dem||0));
+  const tb=$('tZones').querySelector('tbody');tb.innerHTML='';
+  for(const r of rows){const tr=document.createElement('tr');
+    tr.innerHTML=`<td><b>${esc(r.name)}</b>${r.est?' <span class="est">EST.</span>':''}</td>
+    <td>${r.dem!=null?r.dem+'%':'<span class="est">s/datos</span>'}</td>
+    <td>${r.ph??'—'}</td><td>${r.avg!=null?fmt(r.avg):'—'}</td><td>${r.pk!=null?fmt(r.pk):'—'}</td>
+    <td>${r.hour}</td><td>${r.ai}</td>`;tb.appendChild(tr)}
+  const withData=rows.filter(r=>!r.est);
+  $('zTop').innerHTML=withData.length?withData.slice(0,10).map((r,i)=>`<div class="zone-row"><span class="zone-rank">${i+1}</span><b style="flex:1">${esc(r.name)}</b><span class="chip lime">${fmt(r.pk)}/km</span></div>`).join(''):'<div class="sub2">Registrá pedidos con zona para armar tu ranking real. Nada se inventa.</div>';
+  const byWait=[...withData].sort((x,y)=>x.wait-y.wait).slice(0,5);
+  $('zBest').innerHTML=withData.length?byWait.map(r=>`<div class="zone-row"><b style="flex:1">${esc(r.name)}</b><span class="chip amber">${Math.round(r.wait)}m espera</span><span class="chip cyan">${fmt(r.pk)}/km</span></div>`).join(''):'<div class="sub2">Sin datos aún.</div>';
+  renderMap(rows,a);
+}
+function renderMap(rows,a){
+  if(!window.L)return;
+  if(!map){map=L.map('map',{zoomControl:false}).setView([-34.60,-58.44],12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:18}).addTo(map);
+    L.control.zoom({position:'bottomright'}).addTo(map)}
+  heatLayer.forEach(l=>map.removeLayer(l));heatLayer=[];
+  const maxPk=Math.max(...rows.map(r=>r.pk||0),1);
+  for(const r of rows){
+    const co=ZONE_COORDS[r.name];if(!co)continue;
+    const hot=r.pk?r.pk/maxPk:0;
+    const col=r.est?'#5a6376':hot>.66?'#c6f34a':hot>.33?'#ffb454':'#ff5d6c';
+    const c=L.circle(co,{radius:600+hot*700,color:col,fillColor:col,fillOpacity:r.est?.06:.18,weight:1.5,dashArray:r.est?'4 4':null}).addTo(map);
+    c.bindPopup(`<b>${esc(r.name)}</b><br>${r.est?'⚠️ Estimación — sin datos tuyos':`$/km ${fmt(r.pk)} · ${r.ph} ped/h · espera ${Math.round(r.wait)}m`}`);
+    heatLayer.push(c);
+  }
+}
+
+/* ============ GAMIFICATION ============ */
+const TITLES=['Novato','Cadete','Repartidor','Pro','Elite','Leyenda','Máquina','Fantasma','Titán','Inmortal'];
+function lvlOf(xp){let l=1,need=100,acc=0;while(xp>=acc+need){acc+=need;l++;need=Math.round(need*1.35)}return{l,into:xp-acc,need}}
+function addXP(n,why){S.xp+=n;S.coins+=Math.round(n/2);const before=lvlOf(S.xp-n).l,after=lvlOf(S.xp).l;
+  if(after>before){confetti();toast('🎉 ¡Subiste a nivel '+after+'! '+(TITLES[Math.min(after-1,9)]||''));checkBadges()}}
+function bumpStreak(){const td=todayStr();
+  if(S.lastActive===td)return;
+  const y=new Date(Date.now()-864e5);const ys=new Intl.DateTimeFormat('en-CA',{timeZone:TZ}).format(y);
+  S.streak=S.lastActive===ys?S.streak+1:1;S.lastActive=td;
+  if(S.streak%7===0){addXP(150,'racha');toast('🔥 ¡'+S.streak+' días seguidos! +150 XP')}}
+
+const CHALLENGES=[
+  {id:'o20',t:'20 pedidos',test:a=>a.n>=20,xp:200},{id:'o50',t:'50 pedidos',test:a=>a.n>=50,xp:400},
+  {id:'o100',t:'100 pedidos',test:a=>a.n>=100,xp:800},{id:'d100k',t:'$100.000 en un día',test:a=>Object.values(a.byDay).some(v=>v>=100000),xp:1000},
+  {id:'k500',t:'500 km recorridos',test:a=>a.km>=500,xp:500},{id:'k1000',t:'1000 km recorridos',test:a=>a.km>=1000,xp:1000},
+  {id:'s7',t:'7 días seguidos',test:()=>S.streak>=7,xp:300},{id:'s30',t:'30 días seguidos',test:()=>S.streak>=30,xp:1500},
+  {id:'rec',t:'Superar tu récord diario',test:a=>{const v=Object.entries(a.byDay);if(v.length<2)return false;const td=todayStr();const best=Math.max(...v.filter(x=>x[0]!==td).map(x=>x[1]));return (a.day>best&&best>0)},xp:250},
+];
+const BADGE_DEFS=(()=>{const b=[];const ic=['🥉','🥈','🥇','💎','👑','🚀','⚡','🔥','🌟','🏆'];
+  for(let i=1;i<=60;i++)b.push({id:'lvl'+i,t:'Nivel '+i,ic:ic[i%10],test:()=>lvlOf(S.xp).l>=i});
+  [5,10,25,50,100,200,300,500,750,1000].forEach(n=>b.push({id:'ped'+n,t:n+' pedidos',ic:'📦',test:a=>a.n>=n}));
+  [50,100,250,500,1000,2000,3000,5000].forEach(n=>b.push({id:'km'+n,t:n+' km',ic:'🚴',test:a=>a.km>=n}));
+  [50,100,250,500,1000,2500,5000].forEach(n=>b.push({id:'g'+n,t:'$'+n+'k ganados',ic:'💰',test:a=>a.all>=n*1000}));
+  [3,7,14,21,30,60,90,180,365].forEach(n=>b.push({id:'st'+n,t:n+'d racha',ic:'🔥',test:()=>S.streak>=n}));
+  [10,25,50,100,200].forEach(n=>b.push({id:'sv'+n,t:'$'+n+'k ahorrados',ic:'🐷',test:()=>S.savings.reduce((s,x)=>s+x.amt,0)>=n*1000}));
+  ['Rappi','PedidosYa','Uber Eats','Mercado Libre','DiDi Food'].forEach(p=>[10,50,100].forEach(n=>b.push({id:'p'+p+n,t:n+' en '+p,ic:'📱',test:a=>(a.byPlat[p]||{}).n>=n})));
+  [1,5,10,25,50].forEach(n=>b.push({id:'an'+n,t:n+' análisis IA',ic:'🤖',test:()=>true,manual:true}));
+  for(let h=0;h<24;h+=2)b.push({id:'h'+h,t:'Pedido a las '+h+'h',ic:'🕐',test:a=>S.orders.some(o=>new Date(new Date(o.ts).toLocaleString('en-US',{timeZone:TZ})).getHours()===h)});
+  SEED_ZONES.forEach(z=>b.push({id:'z'+z,t:'Conquistá '+z,ic:'📍',test:a=>(a.byZone[z]||{}).n>=5}));
+  return b})();
+function checkBadges(){const a=stats();let nw=0;
+  for(const b of BADGE_DEFS){if(b.manual)continue;
+    if(!S.badges.includes(b.id)&&b.test(a)){S.badges.push(b.id);nw++}}
+  if(nw){toast('🏅 +'+nw+' insignia'+(nw>1?'s':'')+' nueva'+(nw>1?'s':''));confetti()}
+}
+function renderGame(){
+  const a=stats(),lv=lvlOf(S.xp);
+  $('lvlN').textContent=lv.l;$('lvlN2').textContent=lv.l;
+  $('lvlTitle').textContent=TITLES[Math.min(lv.l-1,9)]||'Inmortal';
+  $('xpNow').textContent=lv.into;$('xpNext').textContent=lv.need;$('coins').textContent=S.coins;$('streak').textContent=S.streak;
+  $('xpBar').style.width=(lv.into/lv.need*100)+'%';
+  $('xpRing').style.strokeDashoffset=201-(lv.into/lv.need*201);
+  // misiones diarias (deterministas por fecha)
+  const seed=todayStr().split('-').reduce((s,x)=>s+ +x,0);
+  const MPOOL=[{t:'Registrá 3 pedidos',test:()=>a.dayN>=3,xp:50},{t:'Registrá 6 pedidos',test:()=>a.dayN>=6,xp:100},
+    {t:'Ganá '+fmt(15000)+' hoy',test:()=>a.day>=15000,xp:80},{t:'Guardá un ahorro',test:()=>S.savings.some(s=>s.date===todayStr()),xp:60},
+    {t:'Analizá un pedido con la IA',test:()=>true,xp:30,manual:true},{t:'Cargá un pedido con zona',test:()=>S.orders.some(o=>o.zone&&new Intl.DateTimeFormat('en-CA',{timeZone:TZ}).format(new Date(o.ts))===todayStr()),xp:40}];
+  const ms=[MPOOL[seed%6],MPOOL[(seed+2)%6],MPOOL[(seed+4)%6]];
+  $('missions').innerHTML=ms.map(m=>{const done=!m.manual&&m.test();
+    return `<div class="mission ${done?'done':''}"><span>${done?'✅':'⬜'}</span><div style="flex:1">${esc(m.t)}</div><span class="chip vio">+${m.xp} XP</span></div>`}).join('');
+  // desafíos
+  $('challenges').innerHTML=CHALLENGES.map(c=>{
+    const done=c.test(a),claimed=S.challengeClaimed.includes(c.id);
+    return `<div class="mission ${done?'done':''}"><span>${done?'🏁':'⬜'}</span><div style="flex:1">${esc(c.t)}</div>
+    ${done&&!claimed?`<button class="btn sm" data-claim="${c.id}" data-xp="${c.xp}">Reclamar +${c.xp}</button>`:`<span class="chip ${claimed?'lime':''}">${claimed?'✓ reclamado':'+'+c.xp+' XP'}</span>`}</div>`}).join('');
+  document.querySelectorAll('[data-claim]').forEach(b=>b.onclick=()=>{
+    S.challengeClaimed.push(b.dataset.claim);addXP(+b.dataset.xp,'reto');S.coins+=100;confetti();save();renderGame()});
+  // insignias
+  const won=S.badges.length;
+  $('badgeCount').textContent=won+'/'+BADGE_DEFS.length;
+  $('badges').innerHTML=BADGE_DEFS.slice(0,120).map(b=>`<div class="badge ${S.badges.includes(b.id)?'won':''}"><span class="bi">${b.ic}</span>${esc(b.t)}</div>`).join('')+
+    `<div class="badge" style="opacity:.6">…y ${BADGE_DEFS.length-120} más</div>`;
+}
+$('boxBtn').onclick=()=>{
+  const td=todayStr();
+  if(S.lastBox===td)return toast('🎁 Ya abriste la caja de hoy — volvé mañana');
+  S.lastBox=td;const prize=[50,80,100,150,250][Math.floor(Math.random()*5)];
+  S.coins+=prize;addXP(20,'caja');confetti();save();renderGame();
+  openModal(`<h3 style="margin-bottom:10px">🎁 Caja diaria</h3><div class="prize">+${prize} 🪙</div><div class="sub2">+20 XP · Volvé mañana por más.</div><button class="btn" style="width:100%;margin-top:14px" onclick="closeModal()">¡Genial!</button>`);
+};
+$('wheelBtn').onclick=()=>{
+  if(S.coins<200)return toast('🪙 Necesitás 200 monedas');
+  S.coins-=200;
+  const prizes=[{t:'+500 🪙',f:()=>S.coins+=500},{t:'+300 XP',f:()=>addXP(300,'ruleta')},{t:'+100 🪙',f:()=>S.coins+=100},{t:'Nada 😅',f:()=>{}},{t:'+50 XP',f:()=>addXP(50,'ruleta')},{t:'x2 ¡+400 🪙!',f:()=>S.coins+=400}];
+  const p=prizes[Math.floor(Math.random()*prizes.length)];p.f();
+  if(p.t!=='Nada 😅')confetti();
+  save();renderGame();
+  openModal(`<h3 style="margin-bottom:10px">🎡 Ruleta</h3><div class="prize">${p.t}</div><button class="btn" style="width:100%;margin-top:14px" onclick="closeModal()">Cerrar</button>`);
+};
+function openModal(html){$('modalBox').innerHTML=html;$('modal').classList.add('on')}
+window.closeModal=()=>$('modal').classList.remove('on');
+$('modal').onclick=e=>{if(e.target.id==='modal')closeModal()};
+
+/* ============ CHAT COACH + WEEKLY PLANNER ============ */
+const DIAS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+function hourStats(){
+  const byDow={},byHour={};
+  for(const o of S.orders){
+    const d=new Date(new Date(o.ts).toLocaleString('en-US',{timeZone:TZ}));
+    const dow=d.getDay(),h=d.getHours();
+    (byDow[dow]=byDow[dow]||{pay:0,n:0}).pay+=o.pay;byDow[dow].n++;
+    (byHour[h]=byHour[h]||{pay:0,n:0}).pay+=o.pay;byHour[h].n++;
+  }
+  return{byDow,byHour};
+}
+function weeklyPlan(){
+  const a=stats(),{byDow,byHour}=hourStats();
+  const est=a.n<10;
+  const topH=Object.entries(byHour).sort((x,y)=>y[1].pay-x[1].pay).slice(0,4).map(x=>+x[0]).sort((x,y)=>x-y);
+  const blocks=est?[[12,15],[19,23]]:mergeHours(topH.length?topH:[12,20]);
+  const goal=S.weekGoal||0;
+  const perH=a.min>0?a.all/(a.min/60):3500;
+  const hrsNeeded=goal>0?Math.ceil(goal/Math.max(1,perH)):null;
+  let out=`📅 <b>Tu semana ${est?'(estimada — cargá +10 pedidos para afinar)':'según TUS datos'}:</b>\n`;
+  for(let i=1;i<=7;i++){const dow=i%7;
+    const dw=byDow[dow];
+    const strength=dw&&!est?(dw.pay>=a.all/7?'🔥':'·'):'·';
+    out+=`\n<b>${DIAS[dow]}</b> ${strength} → ${blocks.map(b=>b[0]+':00-'+b[1]+':00').join(' y ')}${dw&&!est?' <span class="sub2">('+fmt(dw.pay)+' hist.)</span>':''}`;
+  }
+  if(hrsNeeded)out+=`\n\n🎯 Meta ${fmt(goal)}: necesitás ~<b>${hrsNeeded}h</b> a tu ritmo de ${fmt(perH)}/h → ${Math.ceil(hrsNeeded/6)}h por día aprox.`;
+  out+=`\n\n💡 Descanso: cortá 1 día (el de menor historial${est?' — típicamente martes':''}).`;
+  return out;
+}
+function mergeHours(hs){const b=[];for(const h of hs){const last=b[b.length-1];
+  if(last&&h<=last[1]+1)last[1]=h+2;else b.push([h,h+2])}return b.slice(0,3)}
+function coachLocal(q){
+  const a=stats(),{byHour}=hourStats(),ql=q.toLowerCase();
+  if(/organiz|semana|plan/.test(ql))return weeklyPlan();
+  if(/horario|hora/.test(ql)){
+    const top=Object.entries(byHour).sort((x,y)=>y[1].pay-x[1].pay).slice(0,3);
+    return top.length?'⏰ Tus mejores horas por ganancia real:\n'+top.map(([h,v],i)=>`${i+1}. <b>${h}:00-${+h+1}:00</b> → ${fmt(v.pay)} en ${v.n} pedidos`).join('\n'):'⏰ Sin datos aún. En CABA los picos típicos son 12-14h y 20-23h (estimación).';
+  }
+  if(/zona|barrio/.test(ql)){
+    const z=Object.entries(a.byZone).sort((x,y)=>y[1].pay/Math.max(1,y[1].km)-x[1].pay/Math.max(1,x[1].km))[0];
+    return z?`📍 Tu mejor zona: <b>${esc(z[0])}</b> con ${fmt(z[1].pay/Math.max(1,z[1].km))}/km en ${z[1].n} pedidos.`:'📍 Cargá pedidos con zona y te digo cuál te conviene con datos reales.';
+  }
+  if(/meta|objetivo/.test(ql)){
+    if(!S.weekGoal)return '🎯 No definiste meta semanal — ponela en Ajustes y te la sigo día a día.';
+    const wk=a.week,pct=Math.round(wk/S.weekGoal*100);
+    return `🎯 Llevás ${fmt(wk)} de ${fmt(S.weekGoal)} (<b>${pct}%</b>). ${pct>=100?'¡Meta cumplida! 🎉':'Te faltan '+fmt(S.weekGoal-wk)+'.'}`;
+  }
+  if(/cu[aá]nto gan/.test(ql))return `💵 Hoy ${fmt(a.day)} · semana ${fmt(a.week)} · mes ${fmt(a.month)}.`;
+  return '🤖 Puedo: <b>organizarte la semana</b>, decirte tu <b>mejor horario</b>, tu <b>mejor zona</b>, o cómo vas con la <b>meta</b>. Con API key en Ajustes respondo cualquier cosa.';
+}
+function chatMsg(txt,me){const d=document.createElement('div');
+  d.style.cssText=`max-width:85%;padding:10px 13px;border-radius:14px;font-size:13.5px;line-height:1.55;white-space:pre-wrap;${me?'justify-self:end;background:linear-gradient(135deg,#c6f34a22,#c6f34a11);border:1px solid rgba(198,243,74,.3)':'justify-self:start;background:var(--bg2);border:1px solid var(--line)'}`;
+  d.innerHTML=me?esc(txt):txt;$('chatLog').appendChild(d);$('chatLog').scrollTop=1e6}
+async function coachAsk(q){
+  chatMsg(q,true);
+  const local=coachLocal(q);
+  if(S.apiKey&&!/organiz|semana|horario|zona|meta/.test(q.toLowerCase())){
+    $('chMode').textContent='pensando…';
+    const a=stats();
+    const ai=await askClaude(`Sos coach de un repartidor de CABA (multi-app). Datos reales: ${a.n} pedidos, total ${fmt(a.all)}, ${fmt(a.day)} hoy, $/h ${a.min>0?fmt(a.all/(a.min/60)):'s/d'}. Pregunta: "${q}". Respondé en 3-4 frases rioplatenses, concreto, sin inventar datos.`);
+    $('chMode').textContent='IA Claude';
+    if(ai)return chatMsg(esc(ai));
+  }
+  setTimeout(()=>chatMsg(local),250);
+}
+$('chSend').onclick=()=>{const q=$('chIn').value.trim();if(!q)return;$('chIn').value='';coachAsk(q)};
+$('chIn').onkeydown=e=>{if(e.key==='Enter')$('chSend').click()};
+document.querySelectorAll('.chq').forEach(b=>b.onclick=()=>coachAsk(b.dataset.q));
+
+/* ============ SUPABASE CLOUD ============ */
+const SB_URL='https://bhmitwfgnxlqyasduyhg.supabase.co';
+const SB_KEY='sb_publishable_wXRrPATFTqMxyrVPHmCRIA_IpFB1Ecf';
+const sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY):null;
+let me=null;
+async function initAuth(){
+  if(!sb)return;
+  const{data}=await sb.auth.getSession();
+  setMe(data.session?.user||null);
+  sb.auth.onAuthStateChange((_e,s)=>{setMe(s?.user||null);renderComm()});
+}
+function setMe(u){me=u;
+  const name=u?(u.user_metadata?.full_name||u.email?.split('@')[0]||'Repartidor'):null;
+  if(u&&name&&!S.name){S.name=name;save()}
+  $('authTxt').textContent=u?('Hola, '+(S.name||name)+' ✅'):'Comunidad global 🌎';
+  $('authSub').textContent=u?'Estás publicando para todos los repartidores.':'Iniciá sesión para publicar, votar y comentar con todos.';
+  $('gLogin').style.display=$('mLogin').style.display=u?'none':'';
+  $('outBtn').style.display=u?'':'none';
+  if(u)sb.from('profiles').upsert({id:u.id,name:S.name||name}).then(()=>{});
+}
+$('gLogin').onclick=()=>sb&&sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});
+$('mLogin').onclick=async()=>{
+  const em=prompt('Tu email (te llega un link mágico, sin contraseña):');
+  if(!em)return;
+  const{error}=await sb.auth.signInWithOtp({email:em.trim(),options:{emailRedirectTo:location.origin}});
+  toast(error?'⚠️ '+error.message:'✉️ Revisá tu correo y tocá el link');
+};
+$('outBtn').onclick=async()=>{await sb.auth.signOut();toast('Sesión cerrada')};
+async function upEvidence(dataURL){
+  const blob=await(await fetch(dataURL)).blob();
+  const path=me.id+'/'+Date.now()+'.jpg';
+  const{error}=await sb.storage.from('evidencias').upload(path,blob,{contentType:'image/jpeg'});
+  if(error)throw error;
+  return sb.storage.from('evidencias').getPublicUrl(path).data.publicUrl;
+}
+let CLOUD={posts:[],reto:[],votes:{},likes:{},cms:{},myVotes:new Set(),myLikes:new Set(),ok:false};
+async function cloudLoad(){
+  if(!sb)return CLOUD.ok=false;
+  try{
+    const wk=isoWeek(nowBA());
+    const[p,r,v,l,c]=await Promise.all([
+      sb.from('posts').select('*').order('created_at',{ascending:false}).limit(40),
+      sb.from('reto_entries').select('*').eq('week',wk).order('created_at',{ascending:false}),
+      sb.from('votes').select('*'),sb.from('likes').select('*'),
+      sb.from('comments').select('*').order('created_at')
+    ]);
+    if(p.error)throw p.error;
+    CLOUD.posts=p.data||[];CLOUD.reto=r.data||[];
+    CLOUD.votes={};(v.data||[]).forEach(x=>{CLOUD.votes[x.entry_id]=(CLOUD.votes[x.entry_id]||0)+1;if(me&&x.user_id===me.id)CLOUD.myVotes.add(x.entry_id)});
+    CLOUD.likes={};(l.data||[]).forEach(x=>{CLOUD.likes[x.post_id]=(CLOUD.likes[x.post_id]||0)+1;if(me&&x.user_id===me.id)CLOUD.myLikes.add(x.post_id)});
+    CLOUD.cms={};(c.data||[]).forEach(x=>{const k=(x.post_id?'p':'e')+(x.post_id||x.entry_id);(CLOUD.cms[k]=CLOUD.cms[k]||[]).push({name:x.author,txt:x.txt})});
+    CLOUD.ok=true;
+  }catch(e){CLOUD.ok=false}
+}
+
+/* ============ COMMUNITY + WORST ORDER ============ */
+function compressImg(file){return new Promise(res=>{
+  const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{
+    const max=900,sc=Math.min(1,max/Math.max(img.width,img.height));
+    const c=document.createElement('canvas');c.width=img.width*sc;c.height=img.height*sc;
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    res(c.toDataURL('image/jpeg',.72))};img.onerror=()=>res(null);img.src=r.result};
+  r.onerror=()=>res(null);r.readAsDataURL(file)})}
+
+$('wpBtn').onclick=async()=>{
+  const desc=$('wpDesc').value.trim(),f=$('wpImg').files[0];
+  if(!desc)return toast('⚠️ Contá qué tenía de malo el pedido');
+  if(!f)return toast('⚠️ Subí la captura como prueba');
+  const img=await compressImg(f);
+  if(!img)return toast('⚠️ No pude leer la imagen');
+  if(me){try{
+    const url=await upEvidence(img);
+    const{error}=await sb.from('reto_entries').insert({user_id:me.id,author:S.name||'Anónimo',week:isoWeek(nowBA()),descr:desc,img_url:url});
+    if(error)throw error;
+  }catch(e){return toast('⚠️ '+(e.message||'Error subiendo'))}}
+  else S.retoEntries.push({id:Date.now(),week:isoWeek(nowBA()),name:S.name||'Anónimo',desc,img,votes:0,voted:false});
+  addXP(60,'reto peor pedido');$('wpDesc').value='';$('wpImg').value='';
+  save();renderComm();confetti();toast('📸 ¡Estás en el reto! +60 XP');
+};
+$('postImgBtn').onclick=()=>$('postImg').click();
+$('postImg').onchange=()=>{$('postImgName').textContent=$('postImg').files[0]?.name||''};
+$('postBtn').onclick=async()=>{
+  const t=$('postTxt').value.trim(),f=$('postImg').files[0];
+  if(!t&&!f)return toast('⚠️ Escribí algo o subí una foto');
+  const img=f?await compressImg(f):null;
+  if(me){try{
+    const url=img?await upEvidence(img):null;
+    const{error}=await sb.from('posts').insert({user_id:me.id,author:S.name||'Anónimo',txt:t,img_url:url});
+    if(error)throw error;
+  }catch(e){return toast('⚠️ '+(e.message||'Error publicando'))}}
+  else S.posts.unshift({id:Date.now(),name:S.name||'Anónimo',txt:t,img,likes:0,liked:false});
+  $('postTxt').value='';$('postImg').value='';$('postImgName').textContent='';
+  addXP(15,'post');save();renderComm();
+};
+async function renderComm(){
+  const wk=isoWeek(nowBA());
+  await cloudLoad();
+  const entries=CLOUD.ok
+    ? CLOUD.reto.map(e=>({id:e.id,name:e.author,desc:e.descr,img:e.img_url,votes:CLOUD.votes[e.id]||0,voted:CLOUD.myVotes.has(e.id),comments:CLOUD.cms['e'+e.id]||[],cloud:true,mine:me&&e.user_id===me.id,created:e.created_at})).sort((a,b)=>b.votes-a.votes)
+    : S.retoEntries.filter(e=>e.week===wk).sort((a,b)=>b.votes-a.votes);
+  $('retoCount').textContent=entries.length+' participante'+(entries.length===1?'':'s')+' esta semana ('+wk+')';
+  const feed=$('feed');feed.innerHTML='';
+  if(entries.length){
+    const h=document.createElement('div');h.className='sub2';h.style.margin='0 0 8px';h.textContent='— Participantes del reto (votá al peor) —';feed.appendChild(h);
+    entries.forEach((e,i)=>feed.appendChild(postEl({...e,txt:e.desc,reto:true,rank:i+1})));
+    const h2=document.createElement('div');h2.className='sub2';h2.style.margin='10px 0 8px';h2.textContent='— Publicaciones —';feed.appendChild(h2);
+  }
+  const posts=CLOUD.ok
+    ? CLOUD.posts.map(p=>({id:p.id,name:p.author,txt:p.txt,img:p.img_url,likes:CLOUD.likes[p.id]||0,liked:CLOUD.myLikes.has(p.id),comments:CLOUD.cms['p'+p.id]||[],cloud:true,mine:me&&p.user_id===me.id,created:p.created_at}))
+    : S.posts;
+  if(!posts.length&&!entries.length)feed.innerHTML='<div class="sub2" style="text-align:center;padding:20px">Todavía no hay publicaciones. Sé el primero 🚀</div>';
+  posts.forEach(p=>feed.appendChild(postEl(p)));
+  document.querySelector('#v-comm .sub2:last-child')&&(document.querySelector('#v-comm > .sub2').textContent=CLOUD.ok?'🌎 Comunidad global en vivo — todos ven lo mismo.':'Sin conexión: viendo tu copia local.');
+}
+function postEl(p){
+  const d=document.createElement('div');d.className='post';
+  d.innerHTML=`<div class="ph"><div class="ava">${esc((p.name||'A')[0].toUpperCase())}</div>
+    <div><b>${esc(p.name)}</b>${p.reto?` <span class="chip vio">🏆 Reto #${p.rank}</span>`:''}<div class="sub2">${new Date(p.created||p.id).toLocaleString('es-AR',{timeZone:TZ,day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div></div></div>
+    ${p.txt?`<div style="font-size:14px">${esc(p.txt)}</div>`:''}
+    ${p.img?`<img class="evid" src="${p.img}" alt="evidencia" loading="lazy">`:''}
+    <div class="vote"><button class="btn ghost sm" data-vote="${p.id}" ${(p.voted||p.liked)?'disabled':''}>${p.reto?'😱 Votar peor pedido':'❤️'} ${p.reto?p.votes:p.likes}</button>
+    <button class="btn ghost sm" data-cm="${p.id}">💬 ${(p.comments||[]).length}</button>
+    <button class="btn ghost sm" data-wa="${p.id}">📤</button>
+    <button class="btn ghost sm" data-del="${p.id}" data-reto="${!!p.reto}">🗑</button></div>
+    <div class="cms" data-cms="${p.id}" style="display:none;margin-top:8px;border-top:1px solid var(--line);padding-top:8px">
+      ${(p.comments||[]).map(c=>`<div style="font-size:12.5px;margin-bottom:5px"><b>${esc(c.name)}:</b> ${esc(c.txt)}</div>`).join('')}
+      <div style="display:flex;gap:6px"><input placeholder="Comentar…" style="flex:1;padding:7px 10px;font-size:13px"><button class="btn sm cadd">➤</button></div>
+    </div>`;
+  d.querySelector('[data-cm]').onclick=()=>{const b=d.querySelector('.cms');b.style.display=b.style.display==='none'?'block':'none'};
+  d.querySelector('.cadd').onclick=async()=>{
+    const inp=d.querySelector('.cms input'),txt=inp.value.trim();if(!txt)return;
+    if(p.cloud){
+      if(!me)return toast('🔐 Iniciá sesión para comentar');
+      await sb.from('comments').insert({user_id:me.id,author:S.name||'Anónimo',txt,[p.reto?'entry_id':'post_id']:p.id});
+      addXP(5,'comentario');save();return renderComm();
+    }
+    const list=p.reto?S.retoEntries:S.posts;const e=list.find(x=>x.id===p.id);
+    if(e){(e.comments=e.comments||[]).push({name:S.name||'Anónimo',txt});addXP(5,'comentario');save();renderComm()}};
+  d.querySelector('[data-wa]').onclick=()=>{
+    const msg=`${p.reto?'😱 Miren este pedido en el reto de Repartix':'Repartix'}: "${p.txt||''}" — sumate: ${location.origin}`;
+    open('https://wa.me/?text='+encodeURIComponent(msg),'_blank')};
+  d.querySelector('[data-vote]').onclick=async()=>{
+    if(p.cloud){
+      if(!me)return toast('🔐 Iniciá sesión para votar');
+      if(p.reto)await sb.from('votes').insert({entry_id:p.id,user_id:me.id});
+      else await sb.from('likes').insert({post_id:p.id,user_id:me.id});
+    }else if(p.reto){const e=S.retoEntries.find(x=>x.id===p.id);if(e&&!e.voted){e.votes++;e.voted=true}}
+    else{const e=S.posts.find(x=>x.id===p.id);if(e&&!e.liked){e.likes++;e.liked=true}}
+    save();renderComm()};
+  const delBtn=d.querySelector('[data-del]');
+  if(p.cloud&&!p.mine)delBtn.style.display='none';
+  delBtn.onclick=async()=>{
+    if(p.cloud){await sb.from(p.reto?'reto_entries':'posts').delete().eq('id',p.id);return renderComm()}
+    if(p.reto)S.retoEntries=S.retoEntries.filter(x=>x.id!==p.id);
+    else S.posts=S.posts.filter(x=>x.id!==p.id);
+    save();renderComm()};
+  return d;
+}
+
+/* ============ SETTINGS ============ */
+$('cSave').onclick=()=>{S.name=$('cName').value.trim();S.weekGoal=+$('cGoal').value||0;save();toast('✓ Perfil guardado')};
+$('cKeySave').onclick=()=>{S.apiKey=$('cKey').value.trim();save();$('anMode').textContent=S.apiKey?'IA Claude':'motor local';toast(S.apiKey?'🤖 IA avanzada activada':'Motor local activo')};
+$('expBtn').onclick=()=>{const b=new Blob([JSON.stringify(S)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='repartix_backup_'+todayStr()+'.json';a.click();URL.revokeObjectURL(a.href)};
+$('impBtn').onclick=()=>$('impFile').click();
+$('impFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.orders)throw 0;S=Object.assign(load(),d);save();renderAll();toast('✓ Respaldo importado')}catch(x){toast('⚠️ Archivo inválido')}};r.readAsText(f)};
+$('wipeBtn').onclick=()=>{if(confirm('¿Borrar TODOS los datos de Repartix en este dispositivo? No se puede deshacer.')){localStorage.removeItem(KEY);S=load();renderAll();toast('🧹 Datos borrados')}};
+$('csvBtn').onclick=()=>{
+  const rows=[['fecha','app','pago','km','min','espera','zona'],...S.orders.map(o=>[new Date(o.ts).toLocaleString('es-AR',{timeZone:TZ}),o.app,o.pay,o.km,o.min,o.wait,o.zone||''])];
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const b=new Blob(['\ufeff'+csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='repartix_pedidos.csv';a.click();URL.revokeObjectURL(a.href)};
+
+/* ============ MOBILE-READY MODULES (interfaces, sin automatización) ============ */
+window.RepartixNative={
+  NotifBridge:{requestPermission:async()=>('Notification'in window)?Notification.requestPermission():'unsupported',
+    notify:(t,b)=>{if(('Notification'in window)&&Notification.permission==='granted')new Notification(t,{body:b})}},
+  BgService:{start:()=>console.info('[BgService] espera implementación nativa'),stop:()=>{}},
+  NotifAnalyzer:{enabled:false,requestUserConsent:()=>console.info('[NotifAnalyzer] requiere consentimiento explícito y capa nativa')}
+};
+
+/* ============ NAV + INIT ============ */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');$('v-'+t.dataset.v).classList.add('on');
+  if(t.dataset.v==='zones'){renderZones();setTimeout(()=>map&&map.invalidateSize(),80)}
+  if(t.dataset.v==='game')renderGame();
+  if(t.dataset.v==='comm')renderComm();
+  if(t.dataset.v==='chat'&&!$('chatLog').children.length)chatMsg('👋 ¡Hola'+(S.name?' '+esc(S.name):'')+'! Soy tu coach. Tocá <b>“Organizame la semana”</b> y te armo el plan con tus mejores horarios reales.');
+});
+function renderAll(){renderHome();renderGame();renderComm();checkBadges();
+  $('cName').value=S.name;$('cGoal').value=S.weekGoal||'';$('cKey').value=S.apiKey||'';
+  $('anMode').textContent=S.apiKey?'IA Claude':'motor local'}
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(renderHome,200)});
+renderAll();initAuth();
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
