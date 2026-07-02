@@ -1,0 +1,12 @@
+{
+  "name": "Repartix — Tu copiloto de reparto",
+  "short_name": "Repartix",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#07090f",
+  "theme_color": "#07090f",
+  "description": "Ganancias, zonas inteligentes, analizador de pedidos IA y retos para repartidores multi-app.",
+  "icons": [
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}
