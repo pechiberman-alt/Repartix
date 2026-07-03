@@ -233,6 +233,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
   <div class="sec">🧠 Autopiloto IA<span class="ln"></span><span class="chip vio" id="apConf">confianza —</span></div>
   <div class="card" id="apCard">
     <div id="apMsg" style="font-size:14.5px;line-height:1.55">Cargá tu primer pedido para que el autopiloto empiece a aprender.</div>
+    <button class="btn sm" id="cpBtn" style="margin-top:10px">▶️ Copiloto en vivo</button>
     <div class="grid g3" style="margin-top:12px">
       <div><div class="sub2">Predicción hoy</div><div class="kpi" style="font-size:17px" id="apDay">—</div></div>
       <div><div class="sub2">Semana</div><div class="kpi" style="font-size:17px" id="apWeek">—</div></div>
@@ -282,6 +283,12 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
       <div class="field"><label>Vehículo</label><select id="aVeh"><option value="bici">🚲 Bicicleta</option><option value="moto">🏍 Moto</option></select></div>
     </div>
     <button class="btn" id="aBtn" style="width:100%">Analizar pedido</button>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+      <div class="ln" style="flex:1;height:1px;background:var(--line)"></div><span class="sub2">o más rápido</span><div style="flex:1;height:1px;background:var(--line)"></div>
+    </div>
+    <input type="file" id="aImg" accept="image/*" style="display:none">
+    <button class="btn ghost" id="aImgBtn" style="width:100%;margin-top:12px">📷 Analizar captura del pedido</button>
+    <div class="sub2" style="margin-top:6px;text-align:center">Sacale captura a la oferta de Rappi/PeYa/Uber y la IA lee pago, distancia y te dice si aceptar. Requiere API key en Ajustes.</div>
     <div id="aOut"></div>
   </div>
 </section>
@@ -331,6 +338,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
   <div class="card" style="padding:10px">
     <div id="chatLog" style="max-height:52vh;overflow-y:auto;display:grid;gap:8px;padding:6px"></div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 4px">
+      <button class="btn ghost sm chq" data-q="¿Qué toca ahora?">⏰ ¿Qué toca ahora?</button>
       <button class="btn ghost sm chq" data-q="Organizame la semana">📅 Organizame la semana</button>
       <button class="btn ghost sm chq" data-q="¿Cuál es mi mejor horario?">⏰ Mejor horario</button>
       <button class="btn ghost sm chq" data-q="¿Cuál es mi mejor zona?">📍 Mejor zona</button>
@@ -459,7 +467,14 @@ function load(){
   s=s||{};
   return Object.assign({orders:[],savings:[],savGoal:100000,name:'',weekGoal:0,apiKey:'',
     xp:0,coins:0,streak:0,lastActive:'',lastBox:'',badges:[],posts:[],retoEntries:[],
-    challengeClaimed:[]},s);
+    challengeClaimed:[],copilot:false,
+    schedule:{
+      1:[[420,570,'Reparto — desayunos (opcional)','w'],[570,690,'Descanso / reubicación','r'],[690,930,'Reparto — almuerzo','w'],[930,1080,'Descanso, comer e hidratarte','r'],[1080,1410,'Reparto — cena','w'],[1425,1500,'Backtest y análisis','s'],[1500,1590,'Programación y estudio','s']],
+      2:null,3:null,4:null,
+      5:[[420,570,'Reparto','w'],[690,930,'Reparto — almuerzo','w'],[930,1080,'Descanso','r'],[1080,1530,'Reparto — MÁXIMA demanda','w'],[1545,1620,'Backtest','s']],
+      6:[[480,600,'Reparto','w'],[690,930,'Reparto — almuerzo','w'],[930,1080,'Descanso','r'],[1080,1530,'Reparto — MÁXIMA demanda','w'],[1545,1620,'Programación y revisión','s']],
+      0:[[480,600,'Reparto','w'],[690,960,'Reparto — almuerzo','w'],[960,1080,'Descanso','r'],[1080,1410,'Reparto','w'],[1410,1560,'Estudio','s']]
+    }},s);
 }
 let saveT;
 function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('⚠️ Almacenamiento lleno — borrá fotos viejas')}},150)}
@@ -652,6 +667,34 @@ $('aBtn').onclick=async()=>{
   </div>`;
   addXP(5,'Análisis');save();
 };
+$('aImgBtn').onclick=()=>{
+  if(!S.apiKey)return toast('🔐 Cargá tu API key de Anthropic en Ajustes para leer capturas');
+  $('aImg').click();
+};
+$('aImg').onchange=async()=>{
+  const f=$('aImg').files[0];if(!f)return;
+  $('aImgBtn').textContent='🔎 Leyendo captura…';$('aImgBtn').disabled=true;
+  try{
+    const dataURL=await compressImg(f);
+    const b64=dataURL.split(',')[1];
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+        {type:'text',text:'Captura de una oferta de pedido de una app de delivery argentina. Extraé y respondé SOLO este JSON, sin markdown ni texto extra: {"pay":numero_en_pesos,"km":kilometros_totales_numero,"wait":minutos_espera_estimados_numero,"app":"nombre app","nota":"1 frase con algo relevante que veas (propina, lluvia, pedido doble, etc) o vacio"}. Si un dato no aparece usá: wait 5, km 0.'}
+      ]}]})});
+    if(!res.ok)throw new Error('API '+res.status);
+    const d=await res.json();
+    const txt=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').replace(/```json|```/g,'').trim();
+    const j=JSON.parse(txt);
+    if(!(j.pay>0))throw new Error('No pude leer el pago en la imagen');
+    $('aPay').value=j.pay; $('aKm1').value=0; $('aKm2').value=j.km||0; $('aWait').value=j.wait??5;
+    toast('📷 Leído: '+fmt(j.pay)+' · '+(j.km||'?')+' km'+(j.app?' · '+j.app:''));
+    $('aBtn').click();
+    if(j.nota)setTimeout(()=>{const o=$('aOut').querySelector('.reasons');o&&o.insertAdjacentHTML('beforeend','<div style="color:var(--cyan)">👁 '+esc(j.nota)+'</div>')},600);
+  }catch(e){toast('⚠️ '+(e.message||'No pude leer la captura'))}
+  $('aImgBtn').textContent='📷 Analizar captura del pedido';$('aImgBtn').disabled=false;$('aImg').value='';
+};
 async function askClaude(prompt){
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
@@ -816,6 +859,51 @@ function openModal(html){$('modalBox').innerHTML=html;$('modal').classList.add('
 window.closeModal=()=>$('modal').classList.remove('on');
 $('modal').onclick=e=>{if(e.target.id==='modal')closeModal()};
 
+/* ============ CRONOGRAMA + COPILOTO EN VIVO ============ */
+function dayBlocks(dow){const sc=S.schedule;return sc[dow]||sc[1]||[]} // 2,3,4 usan el de lunes
+const mm=m=>String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+function currentBlock(){
+  const n=nowBA(),dow=n.getDay(),cur=n.getHours()*60+n.getMinutes();
+  for(const b of dayBlocks(dow))if(cur>=b[0]&&cur<b[1])return{b,rem:b[1]-cur};
+  const prev=dayBlocks((dow+6)%7); // bloques que cruzan medianoche
+  for(const b of prev)if(b[1]>1440&&cur<b[1]-1440)return{b,rem:b[1]-1440-cur};
+  for(const b of dayBlocks(dow))if(b[0]>cur)return{next:b,in:b[0]-cur};
+  return{};
+}
+function scheduleText(dow){
+  const names={w:'🛵',r:'😴',s:'📘'};
+  return dayBlocks(dow).map(b=>`${mm(b[0])}–${mm(b[1]%1440===b[1]?b[1]:b[1])} ${names[b[2+1]]||names[b[3]]||''} ${b[2]}`.replace('undefined','')).join('\n');
+}
+let cpTimer=null,cpLast='';
+function copilotTick(){
+  const a=stats(),{b,rem,next,in:inM}=currentBlock();
+  const perKm=a.km>0?a.all/a.km:null;
+  let msg,key;
+  if(b){
+    const icon=b[3]==='w'?'🟢':b[3]==='r'?'🟠':'📘';
+    key=b[2];
+    msg=`${icon} <b>${b[2]}</b> — quedan ${Math.floor(rem/60)}h ${rem%60}m de este bloque.`;
+    if(b[3]==='w'){
+      msg+=perKm?` Regla de hoy: aceptá pedidos de <b>${fmt(perKm)}/km o más</b>; por debajo, rechazá salvo que te acerque a zona caliente.`:' Cargá pedidos para que calcule tu piso de $/km.';
+      const z=Object.entries(a.byZone).sort((x,y)=>y[1].pay/Math.max(1,y[1].km)-x[1].pay/Math.max(1,x[1].km))[0];
+      if(z)msg+=` Zona sugerida: <b>${esc(z[0])}</b>.`;
+    }
+    if(b[3]==='r')msg+=' Cortá en serio: hidratate y comé — el bloque de la cena paga mejor si llegás fresco.';
+  }else if(next){key='next'+next[2];msg=`⏳ Próximo bloque <b>${mm(next[0])}</b>: ${next[2]} (en ${Math.floor(inM/60)}h ${inM%60}m).`}
+  else{key='free';msg='🌙 Fuera de cronograma. Si salís igual, mantené tu piso de $/km.'}
+  $('apMsg').innerHTML=msg;
+  if(S.copilot&&key!==cpLast&&'Notification'in window&&Notification.permission==='granted')
+    new Notification('Repartix Copiloto',{body:msg.replace(/<[^>]+>/g,''),icon:'icon.svg'});
+  cpLast=key;
+}
+function setCopilot(on){
+  S.copilot=on;save();
+  $('cpBtn').textContent=on?'⏸ Pausar copiloto':'▶️ Copiloto en vivo';
+  clearInterval(cpTimer);
+  if(on){if('Notification'in window&&Notification.permission==='default')Notification.requestPermission();
+    copilotTick();cpTimer=setInterval(copilotTick,60000);toast('🧠 Copiloto activo mientras la app esté abierta')}
+}
+
 /* ============ CHAT COACH + WEEKLY PLANNER ============ */
 const DIAS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 function hourStats(){
@@ -829,28 +917,25 @@ function hourStats(){
   return{byDow,byHour};
 }
 function weeklyPlan(){
-  const a=stats(),{byDow,byHour}=hourStats();
-  const est=a.n<10;
-  const topH=Object.entries(byHour).sort((x,y)=>y[1].pay-x[1].pay).slice(0,4).map(x=>+x[0]).sort((x,y)=>x-y);
-  const blocks=est?[[12,15],[19,23]]:mergeHours(topH.length?topH:[12,20]);
-  const goal=S.weekGoal||0;
-  const perH=a.min>0?a.all/(a.min/60):3500;
-  const hrsNeeded=goal>0?Math.ceil(goal/Math.max(1,perH)):null;
-  let out=`📅 <b>Tu semana ${est?'(estimada — cargá +10 pedidos para afinar)':'según TUS datos'}:</b>\n`;
+  const a=stats(),{byDow}=hourStats();
+  let out='📅 <b>Tu semana (cronograma personal):</b>\n';
   for(let i=1;i<=7;i++){const dow=i%7;
-    const dw=byDow[dow];
-    const strength=dw&&!est?(dw.pay>=a.all/7?'🔥':'·'):'·';
-    out+=`\n<b>${DIAS[dow]}</b> ${strength} → ${blocks.map(b=>b[0]+':00-'+b[1]+':00').join(' y ')}${dw&&!est?' <span class="sub2">('+fmt(dw.pay)+' hist.)</span>':''}`;
+    const dw=byDow[dow],hot=dw&&dw.pay>=a.all/7?' 🔥':'';
+    const blocks=dayBlocks(dow).filter(b=>b[3]==='w').map(b=>mm(b[0])+'–'+mm(b[1]));
+    out+=`\n<b>${DIAS[dow]}</b>${hot} → 🛵 ${blocks.join(' · ')}${dw?' <span class="sub2">('+fmt(dw.pay)+' hist.)</span>':''}`;
   }
-  if(hrsNeeded)out+=`\n\n🎯 Meta ${fmt(goal)}: necesitás ~<b>${hrsNeeded}h</b> a tu ritmo de ${fmt(perH)}/h → ${Math.ceil(hrsNeeded/6)}h por día aprox.`;
-  out+=`\n\n💡 Descanso: cortá 1 día (el de menor historial${est?' — típicamente martes':''}).`;
+  const goal=S.weekGoal||0,perH=a.min>0?a.all/(a.min/60):3500;
+  if(goal>0)out+=`\n\n🎯 Meta ${fmt(goal)}: ~${Math.ceil(goal/Math.max(1,perH))}h a tu ritmo de ${fmt(perH)}/h.`;
+  out+='\n\n📘 Después del reparto: viernes/sábado backtest 01:45–03:00, resto programación/estudio según tu plan.';
   return out;
 }
 function mergeHours(hs){const b=[];for(const h of hs){const last=b[b.length-1];
   if(last&&h<=last[1]+1)last[1]=h+2;else b.push([h,h+2])}return b.slice(0,3)}
 function coachLocal(q){
   const a=stats(),{byHour}=hourStats(),ql=q.toLowerCase();
-  if(/organiz|semana|plan/.test(ql))return weeklyPlan();
+  if(/ahora|hoy.*(hago|toca)|toca/.test(ql)){const{b,rem,next,in:inM}=currentBlock();
+    return b?`${b[3]==='w'?'🟢 Toca <b>repartir</b>':b[3]==='r'?'🟠 Toca <b>descansar</b>':'📘 Toca <b>estudiar</b>'}: ${esc(b[2])} (quedan ${Math.floor(rem/60)}h ${rem%60}m).`:next?`⏳ Ahora libre. Próximo: ${esc(next[2])} a las ${mm(next[0])}.`:'🌙 Nada programado ahora.'}
+  if(/organiz|semana|plan|cronograma/.test(ql))return weeklyPlan();
   if(/horario|hora/.test(ql)){
     const top=Object.entries(byHour).sort((x,y)=>y[1].pay-x[1].pay).slice(0,3);
     return top.length?'⏰ Tus mejores horas por ganancia real:\n'+top.map(([h,v],i)=>`${i+1}. <b>${h}:00-${+h+1}:00</b> → ${fmt(v.pay)} en ${v.n} pedidos`).join('\n'):'⏰ Sin datos aún. En CABA los picos típicos son 12-14h y 20-23h (estimación).';
@@ -876,7 +961,7 @@ async function coachAsk(q){
   if(S.apiKey&&!/organiz|semana|horario|zona|meta/.test(q.toLowerCase())){
     $('chMode').textContent='pensando…';
     const a=stats();
-    const ai=await askClaude(`Sos coach de un repartidor de CABA (multi-app). Datos reales: ${a.n} pedidos, total ${fmt(a.all)}, ${fmt(a.day)} hoy, $/h ${a.min>0?fmt(a.all/(a.min/60)):'s/d'}. Pregunta: "${q}". Respondé en 3-4 frases rioplatenses, concreto, sin inventar datos.`);
+    const cb=currentBlock();const ai=await askClaude(`Sos coach de un repartidor de CABA (multi-app) con cronograma fijo: L-J reparto 7-9:30/11:30-15:30/18-23:30 + estudio de trading a la noche; V-S reparto hasta 1:30; D hasta 23:30. Bloque actual: ${cb.b?cb.b[2]:'libre'}. Datos reales: ${a.n} pedidos, total ${fmt(a.all)}, ${fmt(a.day)} hoy, $/h ${a.min>0?fmt(a.all/(a.min/60)):'s/d'}. Pregunta: "${q}". Respondé en 3-4 frases rioplatenses, concreto, sin inventar datos.`);
     $('chMode').textContent='IA Claude';
     if(ai)return chatMsg(esc(ai));
   }
@@ -1081,6 +1166,8 @@ function renderAll(){renderHome();renderGame();renderComm();checkBadges();
   $('anMode').textContent=S.apiKey?'IA Claude':'motor local'}
 const shOpen=v=>document.body.classList.toggle('sheet-on',v);
 $('fab').onclick=()=>shOpen(true);
+$('cpBtn').onclick=()=>setCopilot(!S.copilot);
+if(S.copilot)setCopilot(true);else copilotTick();
 $('sheetBk').onclick=()=>shOpen(false);
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(renderHome,200)});
 renderAll();initAuth();
