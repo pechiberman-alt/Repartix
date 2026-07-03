@@ -1418,7 +1418,7 @@ $('sheetBk').onclick=()=>shOpen(false);
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(renderHome,200)});
 window.addEventListener('error',e=>toast('🐞 Error: '+(e.message||'').slice(0,80)));
 window.addEventListener('unhandledrejection',e=>toast('🐞 '+String(e.reason&&e.reason.message||e.reason).slice(0,80)));
-const APP_VER='v2026.07.03-2';
+const APP_VER='v2026.07.03-6';
 document.querySelector('footer').insertAdjacentHTML('beforeend','<br>Versión '+APP_VER);
 renderAll();initAuth();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
