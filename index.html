@@ -401,6 +401,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn ghost sm" id="expBtn">⬇ Exportar respaldo</button>
       <button class="btn ghost sm" id="impBtn">⬆ Importar</button><input type="file" id="impFile" accept="application/json" style="display:none">
+      <button class="btn ghost sm" id="updBtn">🔄 Forzar actualización</button>
       <button class="btn red sm" id="wipeBtn">Borrar todo</button>
     </div>
   </div>
@@ -679,8 +680,8 @@ async function readOrderImage(f){
   if(!dataURL)throw new Error('No pude leer la imagen');
   const b64=dataURL.split(',')[1];
   const PROMPT='Captura de una oferta o resumen de pedido de una app de delivery argentina. Extraé y respondé SOLO este JSON, sin markdown ni texto extra: {"pay":numero_en_pesos,"km":kilometros_totales_numero,"wait":minutos_espera_estimados_numero,"min":minutos_totales_del_viaje_numero,"app":"Rappi|PedidosYa|Uber Eats|Mercado Libre|DiDi Food|Cabify|Otra","zona":"barrio si aparece o vacio","nota":"1 frase con algo relevante (propina, lluvia, pedido doble) o vacio"}. Si un dato no aparece usá: wait 5, min 0, km 0.';
-  let txt='';
-  if(S.gKey)txt=await askGemini([{inline_data:{mime_type:'image/jpeg',data:b64}},{text:PROMPT}]);
+  let txt='',gErr='';
+  if(S.gKey){try{txt=await askGemini([{inline_data:{mime_type:'image/jpeg',data:b64}},{text:PROMPT}])}catch(e){gErr=e.message}}
   if(!txt&&S.apiKey){
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
@@ -688,7 +689,7 @@ async function readOrderImage(f){
         {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:PROMPT}]}]})});
     if(res.ok){const d=await res.json();txt=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('')}
   }
-  if(!txt)throw new Error('La IA no respondió — revisá tu key en Ajustes');
+  if(!txt)throw new Error(gErr||'La IA no respondió — revisá tu key en Ajustes');
   const j=JSON.parse(txt.replace(/```json|```/g,'').trim());
   if(!(j.pay>0))throw new Error('No encontré el pago en la imagen');
   return j;
@@ -708,18 +709,26 @@ $('aImg').onchange=async()=>{
 };
 const hasAI=()=>!!(S.apiKey||S.gKey);
 async function askGemini(parts){
-  try{
-    const res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent',{
-      method:'POST',headers:{'Content-Type':'application/json','X-goog-api-key':S.gKey},
-      body:JSON.stringify({contents:[{parts}]})});
-    if(!res.ok)return '';
-    const d=await res.json();
-    return d.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('').trim()||'';
-  }catch(e){return ''}
+  const models=['gemini-flash-latest','gemini-2.0-flash','gemini-1.5-flash'];
+  let lastErr='';
+  for(const m of models){
+    try{
+      let url='https://generativelanguage.googleapis.com/v1beta/models/'+m+':generateContent';
+      if(/^AIza/.test(S.gKey))url+='?key='+S.gKey;
+      const res=await fetch(url,{method:'POST',
+        headers:{'Content-Type':'application/json','X-goog-api-key':S.gKey},
+        body:JSON.stringify({contents:[{parts}]})});
+      const d=await res.json().catch(()=>({}));
+      if(res.ok){const t=d.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('').trim();if(t)return t;lastErr='respuesta vacía'}
+      else{lastErr=d.error?.message||('HTTP '+res.status);
+        if(/API key|API_KEY/i.test(lastErr))break}
+    }catch(e){lastErr=e.message}
+  }
+  throw new Error('Gemini: '+lastErr);
 }
 async function askAI(prompt){
   if(S.apiKey){const r=await askClaude(prompt);if(r)return r}
-  if(S.gKey)return askGemini([{text:prompt}]);
+  if(S.gKey){try{return await askGemini([{text:prompt}])}catch(e){toast('⚠️ '+e.message)}}
   return '';
 }
 async function askClaude(prompt){
@@ -1164,6 +1173,14 @@ $('expBtn').onclick=()=>{const b=new Blob([JSON.stringify(S)],{type:'application
 $('impBtn').onclick=()=>$('impFile').click();
 $('impFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.orders)throw 0;S=Object.assign(load(),d);save();renderAll();toast('✓ Respaldo importado')}catch(x){toast('⚠️ Archivo inválido')}};r.readAsText(f)};
+$('updBtn').onclick=async()=>{
+  toast('🔄 Actualizando…');
+  try{
+    if('serviceWorker'in navigator){const rs=await navigator.serviceWorker.getRegistrations();for(const r of rs)await r.unregister()}
+    if(window.caches){const ks=await caches.keys();for(const k of ks)await caches.delete(k)}
+  }catch(e){}
+  location.reload(true);
+};
 $('wipeBtn').onclick=()=>{if(confirm('¿Borrar TODOS los datos de Repartix en este dispositivo? No se puede deshacer.')){localStorage.removeItem(KEY);S=load();renderAll();toast('🧹 Datos borrados')}};
 $('csvBtn').onclick=()=>{
   const rows=[['fecha','app','pago','km','min','espera','zona'],...S.orders.map(o=>[new Date(o.ts).toLocaleString('es-AR',{timeZone:TZ}),o.app,o.pay,o.km,o.min,o.wait,o.zone||''])];
@@ -1214,6 +1231,10 @@ $('cpBtn').onclick=()=>setCopilot(!S.copilot);
 if(S.copilot)setCopilot(true);else copilotTick();
 $('sheetBk').onclick=()=>shOpen(false);
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(renderHome,200)});
+window.addEventListener('error',e=>toast('🐞 Error: '+(e.message||'').slice(0,80)));
+window.addEventListener('unhandledrejection',e=>toast('🐞 '+String(e.reason&&e.reason.message||e.reason).slice(0,80)));
+const APP_VER='v2026.07.03-2';
+document.querySelector('footer').insertAdjacentHTML('beforeend','<br>Versión '+APP_VER);
 renderAll();initAuth();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
