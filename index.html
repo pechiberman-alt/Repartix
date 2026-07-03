@@ -155,6 +155,27 @@ canvas#cf{position:fixed;inset:0;pointer-events:none;z-index:98}
 .zone-rank{font-family:'IBM Plex Mono';font-weight:600;color:var(--tx3);width:24px}
 .est{font-size:10px;color:var(--amber)}
 
+/* --- Mobile-native upgrade --- */
+.hdr{position:sticky;top:0;z-index:50;background:rgba(7,9,15,.82);backdrop-filter:blur(16px);margin:0 -14px;padding:10px 16px}
+@media(min-width:768px){.hdr{position:static;background:none;margin:0;padding:8px 2px 16px}}
+.hero{background:linear-gradient(150deg,rgba(198,243,74,.16),rgba(198,243,74,.02) 55%),var(--card);border:1px solid rgba(198,243,74,.28);border-radius:22px;padding:20px;margin-bottom:14px;box-shadow:var(--sh)}
+.hero .lbl{font-size:11.5px;color:var(--tx2);text-transform:uppercase;letter-spacing:.1em;font-weight:600}
+.hero .big{font-family:Sora;font-weight:800;font-size:clamp(38px,11vw,52px);letter-spacing:-.03em;color:var(--lime);line-height:1.05;margin:4px 0 2px}
+.hero .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media(max-width:767px){
+  .hs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(148px,44%);overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;margin:0 -14px;padding:2px 14px 6px}
+  .hs::-webkit-scrollbar{display:none}
+  .hs>.card{scroll-snap-align:start}
+}
+.fab{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:70;width:60px;height:60px;border-radius:20px;background:linear-gradient(135deg,var(--lime),var(--lime-d));color:#0a0f05;font-size:30px;font-weight:700;display:grid;place-items:center;box-shadow:0 8px 28px rgba(198,243,74,.45);transition:.2s}
+.fab:active{transform:scale(.92)}
+@media(min-width:768px){.fab{display:none}}
+.sheetBk{position:fixed;inset:0;background:rgba(4,6,10,.7);backdrop-filter:blur(4px);z-index:75;opacity:0;pointer-events:none;transition:.25s}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:76;background:var(--bg2);border:1px solid var(--line);border-bottom:none;border-radius:26px 26px 0 0;padding:14px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.8,.2,1);max-height:88vh;overflow-y:auto}
+.sheet::before{content:"";display:block;width:44px;height:5px;border-radius:99px;background:var(--line);margin:0 auto 12px}
+body.sheet-on .sheet{transform:none}
+body.sheet-on .sheetBk{opacity:1;pointer-events:auto}
+@media(min-width:768px){.sheet{position:static;transform:none;border-radius:var(--r);border-bottom:1px solid var(--line);max-height:none;padding:16px}.sheet::before{display:none}.sheetBk{display:none}}
 footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-size:11px;color:var(--tx3);text-align:center;line-height:1.7}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -185,18 +206,24 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
 
 <!-- ================= HOME ================= -->
 <section class="view on" id="v-home">
-  <div class="grid g2" style="margin-bottom:12px">
-    <div class="card"><h3>💵 Hoy</h3><div class="kpi lime" id="kDay">$0</div><div class="sub2" id="kDayOrders">0 pedidos</div></div>
-    <div class="card"><h3>📅 Semana</h3><div class="kpi" id="kWeek">$0</div><div class="sub2" id="kWeekAvg">—</div></div>
-    <div class="card"><h3>🗓️ Mes</h3><div class="kpi" id="kMonth">$0</div><div class="sub2" id="kMonthProj">—</div></div>
-    <div class="card"><h3>📈 Año</h3><div class="kpi" id="kYear">$0</div><div class="sub2" id="kYearN">—</div></div>
+  <div class="hero">
+    <div class="lbl">💵 Ganancia de hoy</div>
+    <div class="big" id="kDay">$0</div>
+    <div class="sub2" id="kDayOrders">0 pedidos</div>
+    <div class="row">
+      <span class="chip">📅 Semana <b id="kWeek">$0</b></span>
+      <span class="chip">🗓️ Mes <b id="kMonth">$0</b></span>
+      <span class="chip">📈 Año <b id="kYear">$0</b></span>
+    </div>
+    <div class="sub2" style="margin-top:8px" id="kWeekAvg">—</div>
+    <div class="sub2" id="kMonthProj" style="display:none"></div><div class="sub2" id="kYearN" style="display:none"></div>
   </div>
-  <div class="grid g3" style="margin-bottom:12px">
+  <div class="grid g3 hs" style="margin-bottom:12px">
     <div class="card"><h3>⏱ $/hora</h3><div class="kpi cyan" id="kPerH">$0</div></div>
     <div class="card"><h3>📦 $/pedido</h3><div class="kpi cyan" id="kPerO">$0</div></div>
     <div class="card"><h3>🚴 $/km</h3><div class="kpi cyan" id="kPerK">$0</div></div>
   </div>
-  <div class="grid g4" style="margin-bottom:12px">
+  <div class="grid g4 hs" style="margin-bottom:12px">
     <div class="card"><h3>🥇 Récord día</h3><div class="kpi amber" id="rDay">$0</div><div class="sub2" id="rDayD">—</div></div>
     <div class="card"><h3>🥇 Récord semana</h3><div class="kpi amber" id="rWeek">$0</div></div>
     <div class="card"><h3>🥇 Récord mes</h3><div class="kpi amber" id="rMonth">$0</div></div>
@@ -238,19 +265,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
   <div class="sec">📱 Por plataforma<span class="ln"></span></div>
   <div class="card scr"><table class="t" id="tPlat"><thead><tr><th>App</th><th>Pedidos</th><th>Ganancia</th><th>$/pedido</th><th>$/km</th></tr></thead><tbody></tbody></table></div>
 
-  <div class="sec">➕ Registrar pedido<span class="ln"></span></div>
-  <div class="card">
-    <div class="frow">
-      <div class="field"><label>App</label><select id="oApp"><option>Rappi</option><option>PedidosYa</option><option>Uber Eats</option><option>Mercado Libre</option><option>DiDi Food</option><option>Cabify</option><option>Otra</option></select></div>
-      <div class="field"><label>Pago ($)</label><input type="number" id="oPay" min="0" inputmode="decimal"></div>
-      <div class="field"><label>Km totales</label><input type="number" id="oKm" min="0" step="0.1" inputmode="decimal"></div>
-      <div class="field"><label>Minutos</label><input type="number" id="oMin" min="0" inputmode="numeric"></div>
-      <div class="field"><label>Barrio / zona</label><input id="oZone" list="zonesDL" placeholder="Palermo"><datalist id="zonesDL"></datalist></div>
-      <div class="field"><label>Espera (min)</label><input type="number" id="oWait" min="0" value="0"></div>
-    </div>
-    <button class="btn" id="oBtn" style="width:100%">Guardar pedido ✓</button>
-  </div>
-</section>
+  </section>
 
 <!-- ================= ANALYZE ================= -->
 <section class="view" id="v-analyze">
@@ -391,6 +406,21 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
   </footer>
 </section>
 
+</div>
+<button class="fab" id="fab" aria-label="Registrar pedido">＋</button>
+<div class="sheetBk" id="sheetBk"></div>
+<div class="sheet" id="orderSheet">
+  <div style="font-family:Sora;font-weight:800;font-size:17px;margin-bottom:10px">➕ Registrar pedido</div>
+  <div class="frow">
+      <div class="field"><label>App</label><select id="oApp"><option>Rappi</option><option>PedidosYa</option><option>Uber Eats</option><option>Mercado Libre</option><option>DiDi Food</option><option>Cabify</option><option>Otra</option></select></div>
+      <div class="field"><label>Pago ($)</label><input type="number" id="oPay" min="0" inputmode="decimal"></div>
+      <div class="field"><label>Km totales</label><input type="number" id="oKm" min="0" step="0.1" inputmode="decimal"></div>
+      <div class="field"><label>Minutos</label><input type="number" id="oMin" min="0" inputmode="numeric"></div>
+      <div class="field"><label>Barrio / zona</label><input id="oZone" list="zonesDL" placeholder="Palermo"><datalist id="zonesDL"></datalist></div>
+      <div class="field"><label>Espera (min)</label><input type="number" id="oWait" min="0" value="0"></div>
+    </div>
+    <button class="btn" id="oBtn" style="width:100%">Guardar pedido ✓</button>
+  
 </div>
 <div class="toast" id="toast"></div>
 
@@ -566,7 +596,7 @@ $('oBtn').onclick=()=>{
   if(!(pay>0))return toast('⚠️ Ingresá el pago');
   S.orders.push({ts:Date.now(),app:$('oApp').value,pay,km,min,wait,zone:$('oZone').value.trim()});
   ['oPay','oKm','oMin','oZone'].forEach(i=>$(i).value='');$('oWait').value=0;
-  bumpStreak();addXP(25,'Pedido registrado');save();renderAll();toast('✓ Pedido guardado · +25 XP');
+  bumpStreak();addXP(25,'Pedido registrado');save();renderAll();shOpen(false);toast('✓ Pedido guardado · +25 XP');
 };
 
 /* ============ ANALYZER ============ */
@@ -1049,6 +1079,9 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
 function renderAll(){renderHome();renderGame();renderComm();checkBadges();
   $('cName').value=S.name;$('cGoal').value=S.weekGoal||'';$('cKey').value=S.apiKey||'';
   $('anMode').textContent=S.apiKey?'IA Claude':'motor local'}
+const shOpen=v=>document.body.classList.toggle('sheet-on',v);
+$('fab').onclick=()=>shOpen(true);
+$('sheetBk').onclick=()=>shOpen(false);
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(renderHome,200)});
 renderAll();initAuth();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
