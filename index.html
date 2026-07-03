@@ -201,6 +201,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
   <button class="tab" data-v="game"><span class="ic">🏆</span>Retos</button>
   <button class="tab" data-v="chat"><span class="ic">💬</span>Coach</button>
   <button class="tab" data-v="comm"><span class="ic">👥</span>Comunidad</button>
+  <button class="tab" data-v="about"><span class="ic">ℹ️</span>Nosotros</button>
   <button class="tab" data-v="cfg"><span class="ic">⚙️</span>Ajustes</button>
 </nav>
 
@@ -379,6 +380,56 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
   <div class="sub2" style="text-align:center;margin-top:8px">La comunidad vive en este dispositivo. La versión con servidor compartido llega con la app móvil.</div>
 </section>
 
+<!-- ================= ABOUT ================= -->
+<section class="view" id="v-about">
+  <div class="hero" style="text-align:center">
+    <div class="logo" style="margin:0 auto 14px;width:64px;height:64px"><svg viewBox="0 0 24 24" fill="none"><path d="M4 17l5-11 4 7 3-4 4 8" stroke="#0a0f05" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div style="font-family:Sora;font-weight:800;font-size:26px">Repartix<span style="color:var(--lime)">™</span></div>
+    <div class="sub2" style="margin-top:4px">Tu copiloto de reparto</div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <h3>👋 Quiénes somos</h3>
+    <div style="font-size:14px;line-height:1.7">
+      Repartix nació de una necesidad real: repartir en Buenos Aires sin saber si un pedido conviene o no.
+      Es un proyecto creado y desarrollado por <b>url.fx</b> — trader, desarrollador y ex repartidor —
+      para darle a la comunidad de repartidores una herramienta honesta: sin datos inventados,
+      sin promesas falsas, con IA que analiza en base a <b>tu propio historial</b>, no a estimaciones genéricas.
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <h3>🎯 Nuestra misión</h3>
+    <div style="font-size:14px;line-height:1.7">Que cada repartidor tenga la misma información que las apps de delivery usan para decidir qué ofrecerte. Que sepas tu $/km real, tu mejor horario, tu mejor zona — y que una comunidad se ayude entre todos a no aceptar pedidos miserables.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:12px">
+    <h3>💬 Contacto y redes</h3>
+    <div class="grid g2">
+      <a href="https://instagram.com/url.fx" target="_blank" class="chip vio" style="justify-content:center;padding:10px">📷 @url.fx</a>
+      <a href="https://t.me/matrixprocomunidadfx" target="_blank" class="chip vio" style="justify-content:center;padding:10px">✈️ Telegram</a>
+    </div>
+  </div>
+
+  <div class="card reto-card" style="margin-bottom:12px">
+    <h3 style="color:var(--vio)">☕ ¿Te sirvió Repartix?</h3>
+    <div class="sub2" style="margin:6px 0 10px">La app es gratis y sigue siéndolo. Si querés bancar el desarrollo, podés invitarnos un café por Mercado Pago.</div>
+    <div class="kpi" style="font-size:20px;font-family:'IBM Plex Mono'">Alias: <span style="color:var(--lime)">url.mp</span></div>
+  </div>
+
+  <div class="card">
+    <h3>📄 Legal</h3>
+    <div style="font-size:12.5px;line-height:1.8;color:var(--tx2)">
+      <b>© 2026 url.fx — Repartix™.</b> Todos los derechos reservados.<br>
+      Repartix es un producto independiente creado por url.fx. No está afiliado, asociado, autorizado, patrocinado ni conectado oficialmente con Rappi, Uber Eats, PedidosYa, Mercado Libre, DiDi Food, Cabify ni ninguna de sus filiales. Todas las marcas mencionadas pertenecen a sus respectivos dueños y se usan únicamente con fines descriptivos/informativos.<br><br>
+      El contenido, diseño, código, marca y nombre "Repartix" son propiedad de url.fx. Queda prohibida su reproducción total o parcial sin autorización.<br><br>
+      <b>Aviso importante:</b> los cálculos, puntajes y recomendaciones de Repartix (incluida la IA) son estimaciones orientativas basadas en los datos que el usuario carga. No garantizan un resultado económico ni sustituyen el criterio propio de cada repartidor. Repartix no se responsabiliza por decisiones tomadas en base a estas estimaciones, ni por accidentes, multas o daños ocurridos durante el reparto.<br><br>
+      Los datos que cargás (ganancias, ubicaciones, fotos) se guardan en tu dispositivo y, si iniciás sesión, en nuestra base de datos (Supabase) para habilitar la comunidad. No vendemos tus datos a terceros. Podés borrar tu información desde Ajustes en cualquier momento.<br><br>
+      Al usar Repartix aceptás estos términos. Versión de términos: 2026.07.03.
+    </div>
+  </div>
+</section>
+
 <!-- ================= SETTINGS ================= -->
 <section class="view" id="v-cfg">
   <div class="card" style="margin-bottom:12px">
@@ -412,9 +463,10 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
     <div class="sub2" style="line-height:1.7">Arquitectura lista para Android/iOS: módulos <span class="mono">NotifBridge</span> (notificaciones), <span class="mono">BgService</span> (segundo plano) y <span class="mono">NotifAnalyzer</span> (lectura de notificaciones <b>solo con permiso explícito del usuario</b>) están definidos como interfaces y esperan la capa nativa. No hay automatización que viole políticas de Android ni de las plataformas.</div>
   </div>
   <footer>
-    Repartix™ · Hecho por url.fx · Buenos Aires 🇦🇷<br>
-    Repartix es independiente. Rappi, Uber Eats, PedidosYa, Mercado Libre, DiDi y Cabify son marcas de sus respectivos dueños.<br>
-    Las cifras de zonas sin historial son <b>estimaciones</b> y se marcan como tales. Repartix nunca inventa datos como reales.
+    © 2026 <b>url.fx</b> · Repartix™ · Buenos Aires 🇦🇷<br>
+    Marca y desarrollo independientes. Repartix no está afiliado a Rappi, Uber Eats, PedidosYa, Mercado Libre, DiDi ni Cabify — esas marcas pertenecen a sus dueños.<br>
+    Las estimaciones sin historial se marcan como tales, nunca se presentan como datos reales.<br>
+    Ver términos completos en la pestaña <b>ℹ️ Nosotros</b>.
   </footer>
 </section>
 
@@ -1216,6 +1268,7 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   if(t.dataset.v==='zones'){renderZones();setTimeout(()=>map&&map.invalidateSize(),80)}
   if(t.dataset.v==='game')renderGame();
   if(t.dataset.v==='comm')renderComm();
+  if(t.dataset.v==='about'){/* estática */}
   if(t.dataset.v==='chat'&&!$('chatLog').children.length)chatMsg('👋 ¡Hola'+(S.name?' '+esc(S.name):'')+'! Soy tu coach. Tocá <b>“Organizame la semana”</b> y te armo el plan con tus mejores horarios reales.');
 });
 function renderAll(){renderHome();renderGame();renderComm();checkBadges();
