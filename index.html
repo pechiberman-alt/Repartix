@@ -420,6 +420,8 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
 <div class="sheetBk" id="sheetBk"></div>
 <div class="sheet" id="orderSheet">
   <div style="font-family:Sora;font-weight:800;font-size:17px;margin-bottom:10px">➕ Registrar pedido</div>
+  <input type="file" id="oImg" accept="image/*" style="display:none">
+  <button class="btn ghost" id="oImgBtn" style="width:100%;margin-bottom:12px">📷 Cargar desde captura</button>
   <div class="frow">
       <div class="field"><label>App</label><select id="oApp"><option>Rappi</option><option>PedidosYa</option><option>Uber Eats</option><option>Mercado Libre</option><option>DiDi Food</option><option>Cabify</option><option>Otra</option></select></div>
       <div class="field"><label>Pago ($)</label><input type="number" id="oPay" min="0" inputmode="decimal"></div>
@@ -672,28 +674,32 @@ $('aImgBtn').onclick=()=>{
   if(!hasAI())return toast('🔐 Cargá tu key gratis de Gemini (aistudio.google.com) en Ajustes');
   $('aImg').click();
 };
+async function readOrderImage(f){
+  const dataURL=await compressImg(f);
+  if(!dataURL)throw new Error('No pude leer la imagen');
+  const b64=dataURL.split(',')[1];
+  const PROMPT='Captura de una oferta o resumen de pedido de una app de delivery argentina. Extraé y respondé SOLO este JSON, sin markdown ni texto extra: {"pay":numero_en_pesos,"km":kilometros_totales_numero,"wait":minutos_espera_estimados_numero,"min":minutos_totales_del_viaje_numero,"app":"Rappi|PedidosYa|Uber Eats|Mercado Libre|DiDi Food|Cabify|Otra","zona":"barrio si aparece o vacio","nota":"1 frase con algo relevante (propina, lluvia, pedido doble) o vacio"}. Si un dato no aparece usá: wait 5, min 0, km 0.';
+  let txt='';
+  if(S.gKey)txt=await askGemini([{inline_data:{mime_type:'image/jpeg',data:b64}},{text:PROMPT}]);
+  if(!txt&&S.apiKey){
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:PROMPT}]}]})});
+    if(res.ok){const d=await res.json();txt=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('')}
+  }
+  if(!txt)throw new Error('La IA no respondió — revisá tu key en Ajustes');
+  const j=JSON.parse(txt.replace(/```json|```/g,'').trim());
+  if(!(j.pay>0))throw new Error('No encontré el pago en la imagen');
+  return j;
+}
 $('aImg').onchange=async()=>{
   const f=$('aImg').files[0];if(!f)return;
   $('aImgBtn').textContent='🔎 Leyendo captura…';$('aImgBtn').disabled=true;
   try{
-    const dataURL=await compressImg(f);
-    const b64=dataURL.split(',')[1];
-    const PROMPT='Captura de una oferta de pedido de una app de delivery argentina. Extraé y respondé SOLO este JSON, sin markdown ni texto extra: {"pay":numero_en_pesos,"km":kilometros_totales_numero,"wait":minutos_espera_estimados_numero,"app":"nombre app","nota":"1 frase con algo relevante que veas (propina, lluvia, pedido doble, etc) o vacio"}. Si un dato no aparece usá: wait 5, km 0.';
-    let txt='';
-    if(S.gKey){
-      txt=await askGemini([{inline_data:{mime_type:'image/jpeg',data:b64}},{text:PROMPT}]);
-    }
-    if(!txt&&S.apiKey){
-      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
-        headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:PROMPT}]}]})});
-      if(res.ok){const d=await res.json();txt=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('')}
-    }
-    if(!txt)throw new Error('La IA no respondió — revisá tu key en Ajustes');
-    const j=JSON.parse(txt.replace(/```json|```/g,'').trim());
-    if(!(j.pay>0))throw new Error('No pude leer el pago en la imagen');
+    const j=await readOrderImage(f);
     $('aPay').value=j.pay; $('aKm1').value=0; $('aKm2').value=j.km||0; $('aWait').value=j.wait??5;
+    if(j.zona)$('aZone').value=j.zona;
     toast('📷 Leído: '+fmt(j.pay)+' · '+(j.km||'?')+' km'+(j.app?' · '+j.app:''));
     $('aBtn').click();
     if(j.nota)setTimeout(()=>{const o=$('aOut').querySelector('.reasons');o&&o.insertAdjacentHTML('beforeend','<div style="color:var(--cyan)">👁 '+esc(j.nota)+'</div>')},600);
@@ -1187,6 +1193,23 @@ function renderAll(){renderHome();renderGame();renderComm();checkBadges();
   $('anMode').textContent=hasAI()?(S.apiKey?'IA Claude':'IA Gemini'):'motor local'}
 const shOpen=v=>document.body.classList.toggle('sheet-on',v);
 $('fab').onclick=()=>shOpen(true);
+$('oImgBtn').onclick=()=>{
+  if(!hasAI())return toast('🔐 Cargá tu key gratis de Gemini en Ajustes');
+  $('oImg').click();
+};
+$('oImg').onchange=async()=>{
+  const f=$('oImg').files[0];if(!f)return;
+  $('oImgBtn').textContent='🔎 Leyendo…';$('oImgBtn').disabled=true;
+  try{
+    const j=await readOrderImage(f);
+    const apps=[...$('oApp').options].map(o=>o.value);
+    $('oApp').value=apps.includes(j.app)?j.app:'Otra';
+    $('oPay').value=j.pay;$('oKm').value=j.km||'';$('oMin').value=j.min||'';$('oWait').value=j.wait??0;
+    if(j.zona)$('oZone').value=j.zona;
+    toast('📷 Listo: revisá los datos y tocá Guardar');
+  }catch(e){toast('⚠️ '+(e.message||'No pude leer la captura'))}
+  $('oImgBtn').textContent='📷 Cargar desde captura';$('oImgBtn').disabled=false;$('oImg').value='';
+};
 $('cpBtn').onclick=()=>setCopilot(!S.copilot);
 if(S.copilot)setCopilot(true);else copilotTick();
 $('sheetBk').onclick=()=>shOpen(false);
