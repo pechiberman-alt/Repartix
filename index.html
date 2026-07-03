@@ -288,7 +288,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
       <div class="ln" style="flex:1;height:1px;background:var(--line)"></div><span class="sub2">o más rápido</span><div style="flex:1;height:1px;background:var(--line)"></div>
     </div>
     <input type="file" id="aImg" accept="image/*" style="display:none">
-    <button class="btn ghost" id="aImgBtn" style="width:100%;margin-top:12px">📷 Analizar captura del pedido</button>
+    <button class="btn ghost" id="aImgBtn" style="width:100%;margin-top:12px">📷 Elegir foto — se analiza sola</button>
     <div class="sub2" style="margin-top:6px;text-align:center">Sacale captura a la oferta de Rappi/PeYa/Uber y la IA lee pago, distancia y te dice si aceptar. Gratis con key de Gemini (Ajustes).</div>
     <div id="aOut"></div>
   </div>
@@ -354,11 +354,15 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
 
 <!-- ================= COMMUNITY ================= -->
 <section class="view" id="v-comm">
-  <div class="card" id="authBar" style="margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-    <div style="flex:1;min-width:160px"><b id="authTxt">Comunidad global 🌎</b><div class="sub2" id="authSub">Iniciá sesión para publicar, votar y comentar con todos.</div></div>
-    <button class="btn sm" id="gLogin">Entrar con Google</button>
-    <button class="btn ghost sm" id="mLogin">✉️ Email</button>
-    <button class="btn ghost sm" id="outBtn" style="display:none">Salir</button>
+  <div class="card" id="authBar" style="margin-bottom:12px">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:160px"><b id="authTxt">Comunidad global 🌎</b><div class="sub2" id="authSub">Iniciá sesión para publicar, votar y comentar con todos.</div></div>
+      <button class="btn ghost sm" id="outBtn" style="display:none">Salir</button>
+    </div>
+    <div id="authButtons" style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn" id="gLogin" style="flex:1;background:#fff;color:#1a1a1a">🔵 Continuar con Google</button>
+      <button class="btn ghost sm" id="mLogin">✉️</button>
+    </div>
   </div>
   <div class="card reto-card" style="margin-bottom:14px">
     <h3 style="color:var(--vio)">🏆 Reto semanal · El peor pedido</h3>
@@ -797,6 +801,13 @@ async function askClaude(prompt){
 }
 
 /* ============ AUTOPILOT ============ */
+let autoInsightShown=false;
+async function autoInsight(a){
+  if(autoInsightShown||!hasAI())return;autoInsightShown=true;
+  const cb=currentBlock();
+  const r=await askAI(`Sos coach de un repartidor argentino. Bloque actual: ${cb.b?cb.b[2]:'libre'}. Hoy ganó ${fmt(a.day)} en ${a.dayN} pedidos, $/h ${a.min>0?fmt(a.all/(a.min/60)):'sin datos'}. Dale UNA frase corta, motivadora y accionable, tono rioplatense, sin inventar cifras nuevas.`);
+  if(r){const el=$('apMsg');el.innerHTML+='<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line);color:var(--vio)">🤖 '+esc(r)+'</div>'}
+}
 function renderAutopilot(a){
   const h=nowBA().getHours(),day=nowBA().getDay();
   const peak=(h>=11&&h<15)||(h>=19&&h<23);
@@ -816,6 +827,7 @@ function renderAutopilot(a){
   $('apDay').textContent=a.n?fmt(dAvg):'—';
   $('apWeek').textContent=a.n?fmt(dAvg*6):'—';
   $('apMonth').textContent=a.n?fmt(dAvg*24):'—';
+  autoInsight(a);
 }
 
 /* ============ ZONES ============ */
@@ -1064,7 +1076,7 @@ document.querySelectorAll('.chq').forEach(b=>b.onclick=()=>coachAsk(b.dataset.q)
 /* ============ SUPABASE CLOUD ============ */
 const SB_URL='https://bhmitwfgnxlqyasduyhg.supabase.co';
 const SB_KEY='sb_publishable_wXRrPATFTqMxyrVPHmCRIA_IpFB1Ecf';
-const sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY):null;
+const sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
 let me=null;
 async function initAuth(){
   if(!sb)return;
@@ -1077,7 +1089,7 @@ function setMe(u){me=u;
   if(u&&name&&!S.name){S.name=name;save()}
   $('authTxt').textContent=u?('Hola, '+(S.name||name)+' ✅'):'Comunidad global 🌎';
   $('authSub').textContent=u?'Estás publicando para todos los repartidores.':'Iniciá sesión para publicar, votar y comentar con todos.';
-  $('gLogin').style.display=$('mLogin').style.display=u?'none':'';
+  $('authButtons').style.display=u?'none':'';
   $('outBtn').style.display=u?'':'none';
   if(u)sb.from('profiles').upsert({id:u.id,name:S.name||name}).then(()=>{});
 }
@@ -1269,7 +1281,13 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   if(t.dataset.v==='game')renderGame();
   if(t.dataset.v==='comm')renderComm();
   if(t.dataset.v==='about'){/* estática */}
-  if(t.dataset.v==='chat'&&!$('chatLog').children.length)chatMsg('👋 ¡Hola'+(S.name?' '+esc(S.name):'')+'! Soy tu coach. Tocá <b>“Organizame la semana”</b> y te armo el plan con tus mejores horarios reales.');
+  if(t.dataset.v==='chat'&&!$('chatLog').children.length){
+    chatMsg('👋 ¡Hola'+(S.name?' '+esc(S.name):'')+'! Soy tu coach, ya miré tus datos:');
+    setTimeout(()=>{const{b}=currentBlock();const a=stats();
+      let auto=b?`${b[3]==='w'?'🟢 Ahora toca <b>repartir</b>':b[3]==='r'?'🟠 Ahora toca <b>descansar</b>':'📘 Ahora toca <b>estudiar</b>'}: ${esc(b[2])}.`:'🌙 Fuera de horario ahora.';
+      auto+=a.n?` Llevás ${fmt(a.day)} hoy.`:' Cargá tu primer pedido para que empiece a aprender de vos.';
+      chatMsg(auto)},400);
+  }
 });
 function renderAll(){renderHome();renderGame();renderComm();checkBadges();
   $('cName').value=S.name;$('cGoal').value=S.weekGoal||'';$('cKey').value=S.apiKey||'';$('cGKey').value=S.gKey||'';
