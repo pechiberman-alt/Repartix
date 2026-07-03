@@ -394,7 +394,9 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
     <div class="sub2" style="margin-bottom:8px">El motor local funciona sin internet. Con una key <b>gratis</b> de Google Gemini (aistudio.google.com → Get API key) la app lee capturas de pedidos y el coach responde cualquier pregunta. La de Anthropic (Claude) es opcional y de pago. Las claves se guardan solo en tu dispositivo.</div>
     <div class="field"><label>🆓 Google Gemini API key (gratis en aistudio.google.com)</label><input id="cGKey" type="password" placeholder="AIza…"></div>
     <div class="field"><label>Anthropic API key (opcional, de pago)</label><input id="cKey" type="password" placeholder="sk-ant-…"></div>
-    <button class="btn ghost sm" id="cKeySave">Guardar claves</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" id="cKeySave">Guardar claves</button>
+    <button class="btn ghost sm" id="cKeyTest">🧪 Probar key</button></div>
+    <div class="sub2 mono" id="keyTestOut" style="margin-top:8px"></div>
   </div>
   <div class="card" style="margin-bottom:12px">
     <h3>🧹 Datos</h3>
@@ -1173,6 +1175,17 @@ $('expBtn').onclick=()=>{const b=new Blob([JSON.stringify(S)],{type:'application
 $('impBtn').onclick=()=>$('impFile').click();
 $('impFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.orders)throw 0;S=Object.assign(load(),d);save();renderAll();toast('✓ Respaldo importado')}catch(x){toast('⚠️ Archivo inválido')}};r.readAsText(f)};
+$('cKeyTest').onclick=async()=>{
+  S.gKey=$('cGKey').value.trim();S.apiKey=$('cKey').value.trim();save();
+  const out=$('keyTestOut');
+  if(!S.gKey&&!S.apiKey){out.textContent='Pegá una key primero.';return}
+  out.textContent='⏳ Probando contra Google…';
+  if(S.gKey){
+    try{const r=await askGemini([{text:'Respondé solo: OK'}]);
+      out.innerHTML='✅ Gemini respondió: «'+esc(r.slice(0,40))+'» — la key FUNCIONA. Ya podés usar 📷.';
+    }catch(e){out.innerHTML='❌ '+esc(e.message)+'<br>→ Si dice "API key not valid": creá una nueva en aistudio.google.com/apikey.<br>→ Si dice "Failed to fetch": revisá tu internet o probá con datos móviles.';}
+  }else out.textContent='Solo tenés key de Anthropic cargada — también sirve.';
+};
 $('updBtn').onclick=async()=>{
   toast('🔄 Actualizando…');
   try{
