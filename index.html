@@ -288,7 +288,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
     </div>
     <input type="file" id="aImg" accept="image/*" style="display:none">
     <button class="btn ghost" id="aImgBtn" style="width:100%;margin-top:12px">📷 Analizar captura del pedido</button>
-    <div class="sub2" style="margin-top:6px;text-align:center">Sacale captura a la oferta de Rappi/PeYa/Uber y la IA lee pago, distancia y te dice si aceptar. Requiere API key en Ajustes.</div>
+    <div class="sub2" style="margin-top:6px;text-align:center">Sacale captura a la oferta de Rappi/PeYa/Uber y la IA lee pago, distancia y te dice si aceptar. Gratis con key de Gemini (Ajustes).</div>
     <div id="aOut"></div>
   </div>
 </section>
@@ -391,9 +391,10 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
   </div>
   <div class="card" style="margin-bottom:12px">
     <h3>🤖 IA avanzada (opcional)</h3>
-    <div class="sub2" style="margin-bottom:8px">El motor local funciona sin internet. Si tenés una API key de Anthropic, el analizador y el autopiloto usan Claude para explicaciones más finas. La clave se guarda solo en tu dispositivo.</div>
-    <div class="field"><label>Anthropic API key</label><input id="cKey" type="password" placeholder="sk-ant-…"></div>
-    <button class="btn ghost sm" id="cKeySave">Guardar clave</button>
+    <div class="sub2" style="margin-bottom:8px">El motor local funciona sin internet. Con una key <b>gratis</b> de Google Gemini (aistudio.google.com → Get API key) la app lee capturas de pedidos y el coach responde cualquier pregunta. La de Anthropic (Claude) es opcional y de pago. Las claves se guardan solo en tu dispositivo.</div>
+    <div class="field"><label>🆓 Google Gemini API key (gratis en aistudio.google.com)</label><input id="cGKey" type="password" placeholder="AIza…"></div>
+    <div class="field"><label>Anthropic API key (opcional, de pago)</label><input id="cKey" type="password" placeholder="sk-ant-…"></div>
+    <button class="btn ghost sm" id="cKeySave">Guardar claves</button>
   </div>
   <div class="card" style="margin-bottom:12px">
     <h3>🧹 Datos</h3>
@@ -467,7 +468,7 @@ function load(){
   s=s||{};
   return Object.assign({orders:[],savings:[],savGoal:100000,name:'',weekGoal:0,apiKey:'',
     xp:0,coins:0,streak:0,lastActive:'',lastBox:'',badges:[],posts:[],retoEntries:[],
-    challengeClaimed:[],copilot:false,
+    challengeClaimed:[],copilot:false,gKey:'',
     schedule:{
       1:[[420,570,'Reparto — desayunos (opcional)','w'],[570,690,'Descanso / reubicación','r'],[690,930,'Reparto — almuerzo','w'],[930,1080,'Descanso, comer e hidratarte','r'],[1080,1410,'Reparto — cena','w'],[1425,1500,'Backtest y análisis','s'],[1500,1590,'Programación y estudio','s']],
       2:null,3:null,4:null,
@@ -655,10 +656,10 @@ $('aBtn').onclick=async()=>{
   if(!(inp.pay>0))return toast('⚠️ Ingresá el pago ofrecido');
   const r=analyzeLocal(inp,stats());
   let extra='';
-  if(S.apiKey){
+  if(hasAI()){
     $('anMode').textContent='consultando IA…';
-    extra=await askClaude(`Sos copiloto de un repartidor en CABA. Pedido: $${inp.pay}, ${inp.km1+inp.km2}km, espera ${inp.wait}min, zona ${inp.zone||'?'}. Score local ${r.score}/100. En 2 frases rioplatenses, ¿aceptar o rechazar y por qué?`);
-    $('anMode').textContent=extra?'IA Claude':'motor local';
+    extra=await askAI(`Sos copiloto de un repartidor en CABA. Pedido: $${inp.pay}, ${inp.km1+inp.km2}km, espera ${inp.wait}min, zona ${inp.zone||'?'}. Score local ${r.score}/100. En 2 frases rioplatenses, ¿aceptar o rechazar y por qué?`);
+    $('anMode').textContent=extra?(S.gKey&&!S.apiKey?'IA Gemini':'IA Claude'):'motor local';
   }
   $('aOut').innerHTML=`<div class="verdict ${r.tier[1]}">
     <div class="big">${r.accept?'ACEPTAR':'RECHAZAR'}</div>
@@ -668,7 +669,7 @@ $('aBtn').onclick=async()=>{
   addXP(5,'Análisis');save();
 };
 $('aImgBtn').onclick=()=>{
-  if(!S.apiKey)return toast('🔐 Cargá tu API key de Anthropic en Ajustes para leer capturas');
+  if(!hasAI())return toast('🔐 Cargá tu key gratis de Gemini (aistudio.google.com) en Ajustes');
   $('aImg').click();
 };
 $('aImg').onchange=async()=>{
@@ -677,16 +678,20 @@ $('aImg').onchange=async()=>{
   try{
     const dataURL=await compressImg(f);
     const b64=dataURL.split(',')[1];
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,messages:[{role:'user',content:[
-        {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
-        {type:'text',text:'Captura de una oferta de pedido de una app de delivery argentina. Extraé y respondé SOLO este JSON, sin markdown ni texto extra: {"pay":numero_en_pesos,"km":kilometros_totales_numero,"wait":minutos_espera_estimados_numero,"app":"nombre app","nota":"1 frase con algo relevante que veas (propina, lluvia, pedido doble, etc) o vacio"}. Si un dato no aparece usá: wait 5, km 0.'}
-      ]}]})});
-    if(!res.ok)throw new Error('API '+res.status);
-    const d=await res.json();
-    const txt=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').replace(/```json|```/g,'').trim();
-    const j=JSON.parse(txt);
+    const PROMPT='Captura de una oferta de pedido de una app de delivery argentina. Extraé y respondé SOLO este JSON, sin markdown ni texto extra: {"pay":numero_en_pesos,"km":kilometros_totales_numero,"wait":minutos_espera_estimados_numero,"app":"nombre app","nota":"1 frase con algo relevante que veas (propina, lluvia, pedido doble, etc) o vacio"}. Si un dato no aparece usá: wait 5, km 0.';
+    let txt='';
+    if(S.gKey){
+      txt=await askGemini([{inline_data:{mime_type:'image/jpeg',data:b64}},{text:PROMPT}]);
+    }
+    if(!txt&&S.apiKey){
+      const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:300,messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:PROMPT}]}]})});
+      if(res.ok){const d=await res.json();txt=(d.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('')}
+    }
+    if(!txt)throw new Error('La IA no respondió — revisá tu key en Ajustes');
+    const j=JSON.parse(txt.replace(/```json|```/g,'').trim());
     if(!(j.pay>0))throw new Error('No pude leer el pago en la imagen');
     $('aPay').value=j.pay; $('aKm1').value=0; $('aKm2').value=j.km||0; $('aWait').value=j.wait??5;
     toast('📷 Leído: '+fmt(j.pay)+' · '+(j.km||'?')+' km'+(j.app?' · '+j.app:''));
@@ -958,11 +963,11 @@ function chatMsg(txt,me){const d=document.createElement('div');
 async function coachAsk(q){
   chatMsg(q,true);
   const local=coachLocal(q);
-  if(S.apiKey&&!/organiz|semana|horario|zona|meta/.test(q.toLowerCase())){
+  if(hasAI()&&!/organiz|semana|horario|zona|meta/.test(q.toLowerCase())){
     $('chMode').textContent='pensando…';
     const a=stats();
-    const cb=currentBlock();const ai=await askClaude(`Sos coach de un repartidor de CABA (multi-app) con cronograma fijo: L-J reparto 7-9:30/11:30-15:30/18-23:30 + estudio de trading a la noche; V-S reparto hasta 1:30; D hasta 23:30. Bloque actual: ${cb.b?cb.b[2]:'libre'}. Datos reales: ${a.n} pedidos, total ${fmt(a.all)}, ${fmt(a.day)} hoy, $/h ${a.min>0?fmt(a.all/(a.min/60)):'s/d'}. Pregunta: "${q}". Respondé en 3-4 frases rioplatenses, concreto, sin inventar datos.`);
-    $('chMode').textContent='IA Claude';
+    const cb=currentBlock();const ai=await askAI(`Sos coach de un repartidor de CABA (multi-app) con cronograma fijo: L-J reparto 7-9:30/11:30-15:30/18-23:30 + estudio de trading a la noche; V-S reparto hasta 1:30; D hasta 23:30. Bloque actual: ${cb.b?cb.b[2]:'libre'}. Datos reales: ${a.n} pedidos, total ${fmt(a.all)}, ${fmt(a.day)} hoy, $/h ${a.min>0?fmt(a.all/(a.min/60)):'s/d'}. Pregunta: "${q}". Respondé en 3-4 frases rioplatenses, concreto, sin inventar datos.`);
+    $('chMode').textContent=S.gKey&&!S.apiKey?'IA Gemini':'IA Claude';
     if(ai)return chatMsg(esc(ai));
   }
   setTimeout(()=>chatMsg(local),250);
@@ -1132,7 +1137,7 @@ function postEl(p){
 
 /* ============ SETTINGS ============ */
 $('cSave').onclick=()=>{S.name=$('cName').value.trim();S.weekGoal=+$('cGoal').value||0;save();toast('✓ Perfil guardado')};
-$('cKeySave').onclick=()=>{S.apiKey=$('cKey').value.trim();save();$('anMode').textContent=S.apiKey?'IA Claude':'motor local';toast(S.apiKey?'🤖 IA avanzada activada':'Motor local activo')};
+$('cKeySave').onclick=()=>{S.apiKey=$('cKey').value.trim();S.gKey=$('cGKey').value.trim();save();$('anMode').textContent=hasAI()?(S.apiKey?'IA Claude':'IA Gemini'):'motor local';toast(hasAI()?'🤖 IA avanzada activada':'Motor local activo')};
 $('expBtn').onclick=()=>{const b=new Blob([JSON.stringify(S)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='repartix_backup_'+todayStr()+'.json';a.click();URL.revokeObjectURL(a.href)};
 $('impBtn').onclick=()=>$('impFile').click();
 $('impFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
@@ -1162,8 +1167,8 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   if(t.dataset.v==='chat'&&!$('chatLog').children.length)chatMsg('👋 ¡Hola'+(S.name?' '+esc(S.name):'')+'! Soy tu coach. Tocá <b>“Organizame la semana”</b> y te armo el plan con tus mejores horarios reales.');
 });
 function renderAll(){renderHome();renderGame();renderComm();checkBadges();
-  $('cName').value=S.name;$('cGoal').value=S.weekGoal||'';$('cKey').value=S.apiKey||'';
-  $('anMode').textContent=S.apiKey?'IA Claude':'motor local'}
+  $('cName').value=S.name;$('cGoal').value=S.weekGoal||'';$('cKey').value=S.apiKey||'';$('cGKey').value=S.gKey||'';
+  $('anMode').textContent=hasAI()?(S.apiKey?'IA Claude':'IA Gemini'):'motor local'}
 const shOpen=v=>document.body.classList.toggle('sheet-on',v);
 $('fab').onclick=()=>shOpen(true);
 $('cpBtn').onclick=()=>setCopilot(!S.copilot);
