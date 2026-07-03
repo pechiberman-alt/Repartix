@@ -261,6 +261,34 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
     <button class="btn sm" id="sBtn">Guardar ahorro</button>
   </div>
 
+  <div class="sec">💵 Efectivo en mano<span class="ln"></span></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="grid g2">
+      <div><div class="sub2">En tu bolsillo ahora</div><div class="kpi lime" id="cashHand" style="font-size:26px">$0</div></div>
+      <div><div class="sub2">Ya rendido / depositado</div><div class="kpi" id="cashSettled" style="font-size:26px">$0</div></div>
+    </div>
+    <button class="btn ghost sm" id="cashSettleBtn" style="margin-top:10px">✓ Marcar todo como rendido</button>
+  </div>
+
+  <div class="sec">🧾 Gastos<span class="ln"></span><span class="chip red" id="expTotal">$0</span></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="frow">
+      <div class="field"><label>Categoría</label><select id="eCat"><option value="nafta">⛽ Nafta</option><option value="mantenimiento">🔧 Mantenimiento</option><option value="celular">📱 Celular / datos</option><option value="comida">🍔 Comida en ruta</option><option value="seguro">🛡️ Seguro</option><option value="alquiler">🏍️ Alquiler vehículo</option><option value="otro">📦 Otro</option></select></div>
+      <div class="field"><label>Monto ($)</label><input type="number" id="eAmt" min="0"></div>
+    </div>
+    <button class="btn ghost sm" id="eBtn" style="width:100%">Registrar gasto</button>
+    <div class="scr" style="margin-top:12px"><table class="t" id="tExp"><thead><tr><th>Fecha</th><th>Categoría</th><th>Monto</th><th></th></tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="sec">📊 Ganancia neta<span class="ln"></span></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="grid g3">
+      <div><div class="sub2">Bruto hoy</div><div class="kpi" style="font-size:19px" id="netGross">$0</div></div>
+      <div><div class="sub2">− Gastos hoy</div><div class="kpi" style="font-size:19px;color:var(--red)" id="netExp">$0</div></div>
+      <div><div class="sub2">= Neto hoy</div><div class="kpi lime" style="font-size:19px" id="netFinal">$0</div></div>
+    </div>
+  </div>
+
   <div class="sec">📉 Últimos 14 días<span class="ln"></span><button class="btn ghost sm" id="csvBtn">⬇ Exportar CSV</button></div>
   <div class="card"><canvas id="chDays" height="150"></canvas></div>
 
@@ -475,6 +503,12 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
 </section>
 
 </div>
+<div id="installBar" style="display:none;position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:65;background:linear-gradient(135deg,#161c2b,#0f1420);border:1px solid rgba(198,243,74,.35);border-radius:18px;padding:12px 14px;box-shadow:var(--sh);display:flex;align-items:center;gap:12px">
+  <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--lime),var(--lime-d));display:grid;place-items:center;flex-shrink:0;font-size:22px">🛵</div>
+  <div style="flex:1;min-width:0"><b style="font-size:13.5px">Instalá Repartix</b><div class="sub2" style="font-size:11px">Acceso directo, más rápida, sin barra del navegador</div></div>
+  <button class="btn sm" id="installBtn">Instalar</button>
+  <button style="color:var(--tx3);font-size:20px;padding:4px" id="installClose">✕</button>
+</div>
 <button class="fab" id="fab" aria-label="Registrar pedido">＋</button>
 <div class="sheetBk" id="sheetBk"></div>
 <div class="sheet" id="orderSheet">
@@ -489,6 +523,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
       <div class="field"><label>Barrio / zona</label><input id="oZone" list="zonesDL" placeholder="Palermo"><datalist id="zonesDL"></datalist></div>
       <div class="field"><label>Espera (min)</label><input type="number" id="oWait" min="0" value="0"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;margin:8px 4px;font-size:13px;color:var(--tx2)"><input type="checkbox" id="oCash" style="width:18px;height:18px"> 💵 Cobrado en efectivo (sumar a "en mano")</label>
     <button class="btn" id="oBtn" style="width:100%">Guardar pedido ✓</button>
   
 </div>
@@ -529,7 +564,7 @@ function load(){
   s=s||{};
   return Object.assign({orders:[],savings:[],savGoal:100000,name:'',weekGoal:0,apiKey:'',
     xp:0,coins:0,streak:0,lastActive:'',lastBox:'',badges:[],posts:[],retoEntries:[],
-    challengeClaimed:[],copilot:false,gKey:'',
+    challengeClaimed:[],copilot:false,gKey:'',expenses:[],cashOrders:[],cashSettled:[],
     schedule:{
       1:[[420,570,'Reparto — desayunos (opcional)','w'],[570,690,'Descanso / reubicación','r'],[690,930,'Reparto — almuerzo','w'],[930,1080,'Descanso, comer e hidratarte','r'],[1080,1410,'Reparto — cena','w'],[1425,1500,'Backtest y análisis','s'],[1500,1590,'Programación y estudio','s']],
       2:null,3:null,4:null,
@@ -612,6 +647,7 @@ function renderHome(){
   renderAutopilot(a);
   // savings
   renderSavings();
+  renderExpenses();
   // chart 14 días
   const labels=[],vals=[];
   for(let i=13;i>=0;i--){const d=new Date(Date.now()-i*864e5);const ds=new Intl.DateTimeFormat('en-CA',{timeZone:TZ}).format(d);labels.push(ds.slice(5));vals.push(a.byDay[ds]||0)}
@@ -640,6 +676,41 @@ function drawBars(cv,labels,vals){
     if(i%2===0)c.fillText(labels[i],i*bw+bw/2,H-5)});
 }
 function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.fill()}
+
+/* ============ GASTOS + EFECTIVO ============ */
+function renderExpenses(){
+  const td=todayStr();
+  const todayExp=S.expenses.filter(e=>e.date===td).reduce((s,e)=>s+e.amt,0);
+  const totalExp=S.expenses.reduce((s,e)=>s+e.amt,0);
+  $('expTotal').textContent=fmt(totalExp)+' total';
+  const tb=$('tExp').querySelector('tbody');tb.innerHTML='';
+  const CAT={nafta:'⛽ Nafta',mantenimiento:'🔧 Mantenimiento',celular:'📱 Celular',comida:'🍔 Comida',seguro:'🛡️ Seguro',alquiler:'🏍️ Alquiler',otro:'📦 Otro'};
+  const recent=[...S.expenses].sort((a,b)=>b.ts-a.ts).slice(0,15);
+  if(!recent.length)tb.innerHTML='<tr><td colspan="4" style="color:var(--tx3)">Sin gastos cargados.</td></tr>';
+  for(const e of recent){const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${new Date(e.ts).toLocaleDateString('es-AR',{timeZone:TZ,day:'2-digit',month:'2-digit'})}</td><td>${CAT[e.cat]||e.cat}</td><td>${fmt(e.amt)}</td><td><button data-delexp="${e.ts}" style="color:var(--red)">🗑</button></td>`;
+    tb.appendChild(tr)}
+  document.querySelectorAll('[data-delexp]').forEach(b=>b.onclick=()=>{S.expenses=S.expenses.filter(e=>e.ts!=b.dataset.delexp);save();renderExpenses();renderHome()});
+  const a=stats();
+  $('netGross').textContent=fmt(a.day);
+  $('netExp').textContent='-'+fmt(todayExp);
+  $('netFinal').textContent=fmt(a.day-todayExp);
+  // efectivo
+  const hand=S.cashOrders.reduce((s,o)=>s+o.amt,0)-S.cashSettled.reduce((s,o)=>s+o.amt,0);
+  $('cashHand').textContent=fmt(Math.max(0,hand));
+  $('cashSettled').textContent=fmt(S.cashSettled.reduce((s,o)=>s+o.amt,0));
+}
+$('eBtn').onclick=()=>{
+  const amt=+$('eAmt').value;if(!(amt>0))return toast('⚠️ Ingresá el monto del gasto');
+  S.expenses.push({ts:Date.now(),date:todayStr(),cat:$('eCat').value,amt});
+  $('eAmt').value='';save();renderExpenses();renderHome();toast('🧾 Gasto registrado');
+};
+$('cashSettleBtn').onclick=()=>{
+  const hand=S.cashOrders.reduce((s,o)=>s+o.amt,0)-S.cashSettled.reduce((s,o)=>s+o.amt,0);
+  if(hand<=0)return toast('No tenés efectivo pendiente de rendir');
+  S.cashSettled.push({ts:Date.now(),amt:hand});
+  save();renderExpenses();toast('✓ '+fmt(hand)+' marcado como rendido');
+};
 
 /* ============ SAVINGS ============ */
 function renderSavings(){
@@ -671,8 +742,10 @@ $('sBtn').onclick=()=>{
 $('oBtn').onclick=()=>{
   const pay=+$('oPay').value,km=+$('oKm').value||0,min=+$('oMin').value||0,wait=+$('oWait').value||0;
   if(!(pay>0))return toast('⚠️ Ingresá el pago');
-  S.orders.push({ts:Date.now(),app:$('oApp').value,pay,km,min,wait,zone:$('oZone').value.trim()});
-  ['oPay','oKm','oMin','oZone'].forEach(i=>$(i).value='');$('oWait').value=0;
+  const isCash=$('oCash').checked;
+  S.orders.push({ts:Date.now(),app:$('oApp').value,pay,km,min,wait,zone:$('oZone').value.trim(),cash:isCash});
+  if(isCash)S.cashOrders.push({ts:Date.now(),amt:pay});
+  ['oPay','oKm','oMin','oZone'].forEach(i=>$(i).value='');$('oWait').value=0;$('oCash').checked=false;
   bumpStreak();addXP(25,'Pedido registrado');save();renderAll();shOpen(false);toast('✓ Pedido guardado · +25 XP');
 };
 
@@ -1294,6 +1367,27 @@ function renderAll(){renderHome();renderGame();renderComm();checkBadges();
   $('anMode').textContent=hasAI()?(S.apiKey?'IA Claude':'IA Gemini'):'motor local'}
 const shOpen=v=>document.body.classList.toggle('sheet-on',v);
 $('fab').onclick=()=>shOpen(true);
+/* ---- PWA install prompt ---- */
+let deferredPrompt=null;
+addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  if(!localStorage.getItem('repartix_install_dismissed')&&!matchMedia('(display-mode: standalone)').matches)
+    $('installBar').style.display='flex';
+});
+$('installBtn').onclick=async()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  const{outcome}=await deferredPrompt.userChoice;
+  if(outcome==='accepted')toast('🎉 ¡Instalando Repartix!');
+  deferredPrompt=null;$('installBar').style.display='none';
+};
+$('installClose').onclick=()=>{$('installBar').style.display='none';localStorage.setItem('repartix_install_dismissed','1')};
+addEventListener('appinstalled',()=>{$('installBar').style.display='none';toast('✅ Repartix instalada')});
+if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!matchMedia('(display-mode: standalone)').matches&&!localStorage.getItem('repartix_install_dismissed')){
+  $('installBar').style.display='flex';
+  $('installBtn').textContent='¿Cómo?';
+  $('installBtn').onclick=()=>{openModal('<h3 style="margin-bottom:10px">📲 Instalar en iPhone</h3><div style="font-size:14px;line-height:1.8">1. Tocá el botón <b>Compartir</b> (cuadrado con flecha) abajo en Safari<br>2. Elegí <b>"Agregar a pantalla de inicio"</b><br>3. Tocá <b>Agregar</b></div><button class="btn" style="width:100%;margin-top:14px" onclick="closeModal()">Entendido</button>');};
+}
 $('oImgBtn').onclick=()=>{
   if(!hasAI())return toast('🔐 Cargá tu key gratis de Gemini en Ajustes');
   $('oImg').click();
