@@ -402,9 +402,12 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
       <button class="btn ghost sm chq" data-q="¿Cómo voy con la meta?">🎯 Meta</button>
     </div>
     <div style="display:flex;gap:8px;padding:4px">
+      <input type="file" id="chImg" accept="image/*" style="display:none">
+      <button class="btn ghost sm" id="chImgBtn" title="Cargar captura de pedido">📷</button>
       <input id="chIn" placeholder="Preguntale al coach…" style="flex:1">
       <button class="btn sm" id="chSend">➤</button>
     </div>
+    <div class="sub2" style="margin:4px 4px 0">📷 Mandale una captura del pedido y lo registra directo en tu día.</div>
   </div>
 </section>
 
@@ -1244,7 +1247,7 @@ function coachLocal(q){
 }
 function chatMsg(txt,me){const d=document.createElement('div');
   d.style.cssText=`max-width:85%;padding:10px 13px;border-radius:14px;font-size:13.5px;line-height:1.55;white-space:pre-wrap;${me?'justify-self:end;background:linear-gradient(135deg,#c6f34a22,#c6f34a11);border:1px solid rgba(198,243,74,.3)':'justify-self:start;background:var(--bg2);border:1px solid var(--line)'}`;
-  d.innerHTML=me?esc(txt):txt;$('chatLog').appendChild(d);$('chatLog').scrollTop=1e6}
+  d.innerHTML=me?esc(txt):txt;$('chatLog').appendChild(d);$('chatLog').scrollTop=1e6;return d}
 async function coachAsk(q){
   chatMsg(q,true);
   const local=coachLocal(q);
@@ -1259,6 +1262,24 @@ async function coachAsk(q){
 }
 $('chSend').onclick=()=>{const q=$('chIn').value.trim();if(!q)return;$('chIn').value='';coachAsk(q)};
 $('chIn').onkeydown=e=>{if(e.key==='Enter')$('chSend').click()};
+$('chImgBtn').onclick=()=>$('chImg').click();
+$('chImg').onchange=async()=>{
+  const f=$('chImg').files[0];if(!f)return;$('chImg').value='';
+  chatMsg('📷 Captura de un pedido',true);
+  const loading=chatMsg('🔎 Leyendo la captura…');
+  try{
+    const j=await readOrderImage(f);
+    const apps=[...$('oApp').options].map(o=>o.value);
+    const app=apps.includes(j.app)?j.app:'Otra';
+    const zone=(j.zona||'').trim();
+    S.orders.push({ts:Date.now(),app,pay:j.pay,km:j.km||0,min:j.min||0,wait:j.wait??5,zone,cash:false});
+    bumpStreak();addXP(25,'Pedido registrado desde chat');save();renderAll();confetti();
+    loading.innerHTML=`✅ Pedido registrado: <b>${fmt(j.pay)}</b> · ${j.km||'?'} km · ${esc(app)}${zone?' · '+esc(zone):''} · +25 XP`;
+    if(j.nota)chatMsg('👁 '+esc(j.nota));
+  }catch(e){
+    loading.innerHTML='⚠️ No pude leer la captura: '+esc(e.message||'error desconocido');
+  }
+};
 document.querySelectorAll('.chq').forEach(b=>b.onclick=()=>coachAsk(b.dataset.q));
 
 /* ============ SUPABASE CLOUD ============ */
