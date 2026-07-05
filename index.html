@@ -10,7 +10,11 @@
 <meta property="og:type" content="website">
 <meta property="og:image" content="icon.svg">
 <meta property="og:site_name" content="Repartix">
+<meta property="og:locale" content="es_AR">
+<meta name="keywords" content="repartix, repartidor, rider, rappi, uber eats, pedidosya, analizador de pedidos con ia, zonas calientes caba, reto peor pedido">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Repartix™ — Tu copiloto de reparto">
+<meta name="twitter:description" content="Analizá cada pedido con IA, encontrá tus zonas más rentables en CABA y ganá el reto semanal del peor pedido.">
 <link rel="me" href="https://instagram.com/repartix.ar">
 <meta name="theme-color" content="#07090f">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -182,6 +186,26 @@ body.sheet-on .sheetBk{opacity:1;pointer-events:auto}
 @media(min-width:768px){.sheet{position:static;transform:none;border-radius:var(--r);border-bottom:1px solid var(--line);max-height:none;padding:16px}.sheet::before{display:none}.sheetBk{display:none}}
 footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-size:11px;color:var(--tx3);text-align:center;line-height:1.7}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Marketing / Nosotros */
+.feat-grid{display:grid;gap:12px;grid-template-columns:repeat(2,1fr);margin-top:4px}
+@media(min-width:768px){.feat-grid{grid-template-columns:repeat(3,1fr)}}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px}
+.feat .fi{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--lime),var(--lime-d));display:grid;place-items:center;font-size:18px}
+.feat h4{font-size:14px;font-weight:800}
+.feat p{font-size:12.5px;color:var(--tx2);line-height:1.5;flex:1}
+.steps3{display:grid;gap:12px;margin-top:4px}
+@media(min-width:768px){.steps3{grid-template-columns:repeat(3,1fr)}}
+.step3{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.step3 .sn{font-family:Sora;font-weight:800;color:var(--lime);font-size:13px}
+.testi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:10px}
+.testi .stars{color:var(--amber);font-size:12px;letter-spacing:2px}
+.faqd{background:var(--card);border:1px solid var(--line);border-radius:var(--r2);margin-bottom:8px;padding:2px 14px}
+.faqd summary{padding:13px 0;font-weight:700;font-size:13.5px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px}
+.faqd summary::-webkit-details-marker{display:none}
+.faqd summary::after{content:"+";color:var(--tx2);font-size:18px}
+.faqd[open] summary::after{content:"–"}
+.faqd .fa{padding:0 0 14px;font-size:13px;color:var(--tx2);line-height:1.6}
 </style>
 </head>
 <body>
@@ -422,6 +446,77 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
     <div class="logo" style="margin:0 auto 14px;width:64px;height:64px"><svg viewBox="0 0 24 24" fill="none"><path d="M4 17l5-11 4 7 3-4 4 8" stroke="#0a0f05" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <div style="font-family:Sora;font-weight:800;font-size:26px">Repartix<span style="color:var(--lime)">™</span></div>
     <div class="sub2" style="margin-top:4px">Tu copiloto de reparto</div>
+    <div style="font-size:14px;color:var(--tx2);line-height:1.6;max-width:440px;margin:12px auto 0">Antes de aceptar un pedido, sabé si te conviene. Analizador con IA, tus zonas más rentables en CABA, retos con la comunidad y control real de tu plata — todo gratis, sin cuenta obligatoria.</div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px">
+      <button class="btn" onclick="goTab('analyze')">🤖 Probar el analizador</button>
+      <button class="btn ghost" onclick="document.getElementById('installBtn').click()">📲 Instalar la app</button>
+    </div>
+    <div class="sub2" style="margin-top:10px">Gratis, sin publicidad · Tus datos quedan en tu dispositivo</div>
+  </div>
+
+  <div class="sec" style="margin-top:0">✨ Todo lo que hace por vos<span class="ln"></span></div>
+  <div class="feat-grid" style="margin-bottom:16px">
+    <div class="feat">
+      <div class="fi">🤖</div>
+      <h4>Analizador IA</h4>
+      <p>Sacale captura a la oferta de Rappi, PeYa o Uber y la IA te dice en segundos si conviene aceptar, con tu pago, distancia y zona.</p>
+      <button class="btn ghost sm" onclick="goTab('analyze')">Probar →</button>
+    </div>
+    <div class="feat">
+      <div class="fi">🗺️</div>
+      <h4>Zonas &amp; mapa CABA</h4>
+      <p>Tus zonas más calientes, mejor $/km y horario ideal, calculados con tu propio historial real.</p>
+      <button class="btn ghost sm" onclick="goTab('zones')">Ver mapa →</button>
+    </div>
+    <div class="feat">
+      <div class="fi">🏆</div>
+      <h4>Retos &amp; comunidad</h4>
+      <p>Competí en el reto semanal del peor pedido, sumá misiones diarias y ganá insignias.</p>
+      <button class="btn ghost sm" onclick="goTab('game')">Ver retos →</button>
+    </div>
+    <div class="feat">
+      <div class="fi">💬</div>
+      <h4>Coach IA</h4>
+      <p>Preguntale lo que sea: tu mejor horario, tu mejor zona, o cómo vas con tu meta semanal.</p>
+      <button class="btn ghost sm" onclick="goTab('chat')">Hablar →</button>
+    </div>
+    <div class="feat">
+      <div class="fi">💰</div>
+      <h4>Plata bajo control</h4>
+      <p>Ahorro, efectivo en mano, gastos y ganancia neta calculados automáticamente en tu Panel.</p>
+      <button class="btn ghost sm" onclick="goTab('home')">Ver panel →</button>
+    </div>
+    <div class="feat">
+      <div class="fi">👥</div>
+      <h4>Comunidad global</h4>
+      <p>Publicá, votá y enterate de zonas calientes en tiempo real con otros repartidores.</p>
+      <button class="btn ghost sm" onclick="goTab('comm')">Sumarme →</button>
+    </div>
+  </div>
+
+  <div class="sec">🚀 Cómo funciona<span class="ln"></span></div>
+  <div class="steps3" style="margin-bottom:16px">
+    <div class="step3"><div class="sn">PASO 1</div><div style="font-weight:700;margin:6px 0 4px">Cargá tu primer pedido</div><div class="sub2">Manual o con una captura — la IA empieza a aprender de tu historial real.</div></div>
+    <div class="step3"><div class="sn">PASO 2</div><div style="font-weight:700;margin:6px 0 4px">Analizá antes de aceptar</div><div class="sub2">Sabés en segundos si el pago compensa el km, el tiempo y la zona.</div></div>
+    <div class="step3"><div class="sn">PASO 3</div><div style="font-weight:700;margin:6px 0 4px">Subí de nivel</div><div class="sub2">Ganá XP, monedas e insignias, y competí en los retos de la comunidad.</div></div>
+  </div>
+
+  <div class="sec">💬 Lo que dicen los riders<span class="ln"></span></div>
+  <div style="margin-bottom:6px">
+    <div class="testi"><div class="stars">★★★★★</div><div style="font-size:13.5px;margin-top:6px">"Le sacaba captura a cada oferta antes de mandarme, y ahora sé en 5 segundos si conviene."</div><div class="sub2" style="margin-top:8px">Rider en Palermo · moto</div></div>
+    <div class="testi"><div class="stars">★★★★★</div><div style="font-size:13.5px;margin-top:6px">"El mapa de zonas me cambió el recorrido de los sábados."</div><div class="sub2" style="margin-top:8px">Rider en Belgrano · bici</div></div>
+    <div class="testi"><div class="stars">★★★★★</div><div style="font-size:13.5px;margin-top:6px">"Gané el reto del peor pedido dos semanas seguidas — es como terapia grupal."</div><div class="sub2" style="margin-top:8px">Rider en CABA</div></div>
+  </div>
+  <div class="sub2" style="text-align:center;margin-bottom:16px">Testimonios ilustrativos a modo de ejemplo.</div>
+
+  <div class="sec">❓ Preguntas frecuentes<span class="ln"></span></div>
+  <div style="margin-bottom:16px">
+    <details class="faqd"><summary>¿Necesito crear una cuenta para usar Repartix?</summary><div class="fa">No. Podés usar el panel, el analizador y las zonas sin cuenta. Solo hace falta iniciar sesión con Google si querés publicar, votar o comentar en la Comunidad global.</div></details>
+    <details class="faqd"><summary>¿Es gratis?</summary><div class="fa">Sí, y sigue siéndolo. El motor local no tiene costo. Si querés que el analizador lea capturas automáticamente, necesitás una key gratis de Google Gemini (se saca en aistudio.google.com).</div></details>
+    <details class="faqd"><summary>¿Repartix se conecta con Rappi, Uber Eats o PedidosYa?</summary><div class="fa">No. No pide accesos ni contraseñas de esas apps — vos sacás una captura de la oferta y la IA la lee.</div></details>
+    <details class="faqd"><summary>¿El mapa de zonas funciona en cualquier ciudad?</summary><div class="fa">El mapa premium está armado para CABA. El resto de las funciones (analizador, panel, retos, coach) funciona en cualquier lugar donde repartas.</div></details>
+    <details class="faqd"><summary>¿Mis datos están seguros?</summary><div class="fa">Se guardan en tu dispositivo. Si iniciás sesión para la comunidad, también en la base de datos (Supabase) solo para eso — nunca se venden a terceros.</div></details>
+    <details class="faqd"><summary>¿Cómo ayudo a que el proyecto siga?</summary><div class="fa">Es gratis y no tiene publicidad. Si te sirvió, podés invitar un café por Mercado Pago (alias más abajo) — nunca es obligatorio.</div></details>
   </div>
 
   <div class="card" style="margin-bottom:12px">
@@ -1353,6 +1448,7 @@ window.RepartixNative={
 };
 
 /* ============ NAV + INIT ============ */
+function goTab(v){const t=document.querySelector('.tab[data-v="'+v+'"]');if(t)t.click();window.scrollTo({top:0,behavior:'smooth'})}
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
