@@ -967,7 +967,7 @@ async function askGemini(parts){
   throw new Error('Gemini: '+lastErr);
 }
 async function askSharedAI(parts){
-  const res=await fetch('/.netlify/functions/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parts})});
+  const res=await fetch('/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parts})});
   const d=await res.json().catch(()=>({}));
   if(!res.ok||!d.text)throw new Error(d.error||'IA compartida sin respuesta');
   return d.text;
