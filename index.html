@@ -345,7 +345,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
     </div>
     <input type="file" id="aImg" accept="image/*" style="display:none">
     <button class="btn ghost" id="aImgBtn" style="width:100%;margin-top:12px">📷 Elegir foto — se analiza sola</button>
-    <div class="sub2" style="margin-top:6px;text-align:center">Sacale captura a la oferta de Rappi/PeYa/Uber y la IA lee pago, distancia y te dice si aceptar. Gratis con key de Gemini (Ajustes).</div>
+    <div class="sub2" style="margin-top:6px;text-align:center">Sacale captura a la oferta de Rappi/PeYa/Uber y la IA lee pago, distancia y te dice si aceptar. Ya está lista, no necesitás cargar ninguna key.</div>
     <div id="aOut"></div>
   </div>
 </section>
@@ -567,6 +567,12 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
 <!-- ================= SETTINGS ================= -->
 <section class="view" id="v-cfg">
   <div class="card" style="margin-bottom:12px">
+    <h3>☁️ Tu cuenta</h3>
+    <div class="sub2" id="cfgAuthSub" style="margin-bottom:10px">Iniciá sesión para sincronizar tus pedidos, ahorros y nivel entre dispositivos.</div>
+    <div id="cfgAuthButtons"><button class="btn" id="cfgLoginBtn" style="width:100%;background:#fff;color:#1a1a1a">🔵 Continuar con Google</button></div>
+    <button class="btn ghost sm" id="cfgOutBtn" style="display:none">Cerrar sesión</button>
+  </div>
+  <div class="card" style="margin-bottom:12px">
     <h3>👤 Perfil</h3>
     <div class="frow">
       <div class="field"><label>Nombre / alias</label><input id="cName" placeholder="Uri"></div>
@@ -576,7 +582,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
   </div>
   <div class="card" style="margin-bottom:12px">
     <h3>🤖 IA avanzada (opcional)</h3>
-    <div class="sub2" style="margin-bottom:8px">El motor local funciona sin internet. Con una key <b>gratis</b> de Google Gemini (aistudio.google.com → Get API key) la app lee capturas de pedidos y el coach responde cualquier pregunta. La de Anthropic (Claude) es opcional y de pago. Las claves se guardan solo en tu dispositivo.</div>
+    <div class="sub2" style="margin-bottom:8px">Repartix ya incluye IA compartida gratis para leer capturas y responder en el coach — no necesitás cargar nada. Si querés tu propia velocidad/cuota, cargá tu key <b>gratis</b> de Google Gemini (aistudio.google.com → Get API key) o, opcional y de pago, una de Anthropic (Claude). Las claves se guardan solo en tu dispositivo.</div>
     <div class="field"><label>🆓 Google Gemini API key (gratis en aistudio.google.com)</label><input id="cGKey" type="password" placeholder="AIza…"></div>
     <div class="field"><label>Anthropic API key (opcional, de pago)</label><input id="cKey" type="password" placeholder="sk-ant-…"></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" id="cKeySave">Guardar claves</button>
@@ -636,7 +642,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
 
 <datalist id="zonesDL2"></datalist>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 'use strict';
 /* ============ STATE ============ */
@@ -676,7 +682,7 @@ function load(){
     }},s);
 }
 let saveT;
-function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('⚠️ Almacenamiento lleno — borrá fotos viejas')}},150)}
+function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('⚠️ Almacenamiento lleno — borrá fotos viejas')}if(typeof me!=='undefined'&&me)cloudPushState()},150)}
 
 /* ============ TOAST + CONFETTI ============ */
 let toastT;
@@ -895,7 +901,7 @@ $('aBtn').onclick=async()=>{
   if(hasAI()){
     $('anMode').textContent='consultando IA…';
     extra=await askAI(`Sos copiloto de un repartidor en CABA. Pedido: $${inp.pay}, ${inp.km1+inp.km2}km, espera ${inp.wait}min, zona ${inp.zone||'?'}. Score local ${r.score}/100. En 2 frases rioplatenses, ¿aceptar o rechazar y por qué?`);
-    $('anMode').textContent=extra?(S.gKey&&!S.apiKey?'IA Gemini':'IA Claude'):'motor local';
+    $('anMode').textContent=extra?(S.apiKey?'IA Claude':'IA Gemini'):'motor local';
   }
   $('aOut').innerHTML=`<div class="verdict ${r.tier[1]}">
     <div class="big">${r.accept?'ACEPTAR':'RECHAZAR'}</div>
@@ -905,7 +911,6 @@ $('aBtn').onclick=async()=>{
   addXP(5,'Análisis');save();
 };
 $('aImgBtn').onclick=()=>{
-  if(!hasAI())return toast('🔐 Cargá tu key gratis de Gemini (aistudio.google.com) en Ajustes');
   $('aImg').click();
 };
 async function readOrderImage(f){
@@ -914,7 +919,7 @@ async function readOrderImage(f){
   const b64=dataURL.split(',')[1];
   const PROMPT='Captura de una oferta o resumen de pedido de una app de delivery argentina. Extraé y respondé SOLO este JSON, sin markdown ni texto extra: {"pay":numero_en_pesos,"km":kilometros_totales_numero,"wait":minutos_espera_estimados_numero,"min":minutos_totales_del_viaje_numero,"app":"Rappi|PedidosYa|Uber Eats|Mercado Libre|DiDi Food|Cabify|Otra","zona":"barrio si aparece o vacio","nota":"1 frase con algo relevante (propina, lluvia, pedido doble) o vacio"}. Si un dato no aparece usá: wait 5, min 0, km 0.';
   let txt='',gErr='';
-  if(S.gKey){try{txt=await askGemini([{inline_data:{mime_type:'image/jpeg',data:b64}},{text:PROMPT}])}catch(e){gErr=e.message}}
+  try{txt=await askGemini([{inline_data:{mime_type:'image/jpeg',data:b64}},{text:PROMPT}])}catch(e){gErr=e.message}
   if(!txt&&S.apiKey){
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
@@ -940,8 +945,9 @@ $('aImg').onchange=async()=>{
   }catch(e){toast('⚠️ '+(e.message||'No pude leer la captura'))}
   $('aImgBtn').textContent='📷 Analizar captura del pedido';$('aImgBtn').disabled=false;$('aImg').value='';
 };
-const hasAI=()=>!!(S.apiKey||S.gKey);
+const hasAI=()=>true;
 async function askGemini(parts){
+  if(!S.gKey)return askSharedAI(parts);
   const models=['gemini-flash-latest','gemini-2.0-flash','gemini-1.5-flash'];
   let lastErr='';
   for(const m of models){
@@ -957,11 +963,18 @@ async function askGemini(parts){
         if(/API key|API_KEY/i.test(lastErr))break}
     }catch(e){lastErr=e.message}
   }
+  try{return await askSharedAI(parts)}catch(e2){}
   throw new Error('Gemini: '+lastErr);
+}
+async function askSharedAI(parts){
+  const res=await fetch('/.netlify/functions/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({parts})});
+  const d=await res.json().catch(()=>({}));
+  if(!res.ok||!d.text)throw new Error(d.error||'IA compartida sin respuesta');
+  return d.text;
 }
 async function askAI(prompt){
   if(S.apiKey){const r=await askClaude(prompt);if(r)return r}
-  if(S.gKey){try{return await askGemini([{text:prompt}])}catch(e){toast('⚠️ '+e.message)}}
+  try{return await askGemini([{text:prompt}])}catch(e){toast('⚠️ '+e.message)}
   return '';
 }
 async function askClaude(prompt){
@@ -1227,7 +1240,7 @@ function coachLocal(q){
     return `🎯 Llevás ${fmt(wk)} de ${fmt(S.weekGoal)} (<b>${pct}%</b>). ${pct>=100?'¡Meta cumplida! 🎉':'Te faltan '+fmt(S.weekGoal-wk)+'.'}`;
   }
   if(/cu[aá]nto gan/.test(ql))return `💵 Hoy ${fmt(a.day)} · semana ${fmt(a.week)} · mes ${fmt(a.month)}.`;
-  return '🤖 Puedo: <b>organizarte la semana</b>, decirte tu <b>mejor horario</b>, tu <b>mejor zona</b>, o cómo vas con la <b>meta</b>. Con API key en Ajustes respondo cualquier cosa.';
+  return '🤖 Puedo: <b>organizarte la semana</b>, decirte tu <b>mejor horario</b>, tu <b>mejor zona</b>, o cómo vas con la <b>meta</b>. Preguntame cualquier otra cosa, ya tengo IA conectada.';
 }
 function chatMsg(txt,me){const d=document.createElement('div');
   d.style.cssText=`max-width:85%;padding:10px 13px;border-radius:14px;font-size:13.5px;line-height:1.55;white-space:pre-wrap;${me?'justify-self:end;background:linear-gradient(135deg,#c6f34a22,#c6f34a11);border:1px solid rgba(198,243,74,.3)':'justify-self:start;background:var(--bg2);border:1px solid var(--line)'}`;
@@ -1239,7 +1252,7 @@ async function coachAsk(q){
     $('chMode').textContent='pensando…';
     const a=stats();
     const cb=currentBlock();const ai=await askAI(`Sos coach de un repartidor de CABA (multi-app) con cronograma fijo: L-J reparto 7-9:30/11:30-15:30/18-23:30 + estudio de trading a la noche; V-S reparto hasta 1:30; D hasta 23:30. Bloque actual: ${cb.b?cb.b[2]:'libre'}. Datos reales: ${a.n} pedidos, total ${fmt(a.all)}, ${fmt(a.day)} hoy, $/h ${a.min>0?fmt(a.all/(a.min/60)):'s/d'}. Pregunta: "${q}". Respondé en 3-4 frases rioplatenses, concreto, sin inventar datos.`);
-    $('chMode').textContent=S.gKey&&!S.apiKey?'IA Gemini':'IA Claude';
+    $('chMode').textContent=S.apiKey?'IA Claude':'IA Gemini';
     if(ai)return chatMsg(esc(ai));
   }
   setTimeout(()=>chatMsg(local),250);
@@ -1266,7 +1279,11 @@ function setMe(u){me=u;
   $('authSub').textContent=u?'Estás publicando para todos los repartidores.':'Iniciá sesión para publicar, votar y comentar con todos.';
   $('authButtons').style.display=u?'none':'';
   $('outBtn').style.display=u?'':'none';
-  if(u)sb.from('profiles').upsert({id:u.id,name:S.name||name}).then(()=>{});
+  $('cfgAuthSub').textContent=u?('✅ Conectado como '+(S.name||name)+' · ☁️ tus datos se sincronizan solos'):'Iniciá sesión para sincronizar tus pedidos, ahorros y nivel entre dispositivos.';
+  $('cfgAuthButtons').style.display=u?'none':'';
+  $('cfgOutBtn').style.display=u?'':'none';
+  if(u){sb.from('profiles').upsert({id:u.id,name:S.name||name}).then(()=>{});cloudPullState()}
+  else stateSynced=false;
 }
 $('gLogin').onclick=()=>sb&&sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});
 $('mLogin').onclick=async()=>{
@@ -1276,6 +1293,46 @@ $('mLogin').onclick=async()=>{
   toast(error?'⚠️ '+error.message:'✉️ Revisá tu correo y tocá el link');
 };
 $('outBtn').onclick=async()=>{await sb.auth.signOut();toast('Sesión cerrada')};
+$('cfgLoginBtn').onclick=()=>$('gLogin').click();
+$('cfgOutBtn').onclick=()=>$('outBtn').click();
+
+/* ============ SYNC DE CUENTA (pedidos, ahorros, nivel, ajustes) ============ */
+const SYNC_KEYS=['orders','savings','savGoal','name','weekGoal','xp','coins','streak','lastActive','lastBox','badges','challengeClaimed','copilot','expenses','cashOrders','cashSettled','schedule'];
+function stateForSync(){const o={};SYNC_KEYS.forEach(k=>o[k]=S[k]);return o}
+function mergeArr(a,b,keyFn){const map=new Map();(a||[]).forEach(x=>map.set(keyFn(x),x));(b||[]).forEach(x=>map.set(keyFn(x),x));return[...map.values()]}
+let stateSynced=false,pushingState=false;
+async function cloudPullState(){
+  if(!sb||!me||stateSynced)return;stateSynced=true;
+  try{
+    const{data,error}=await sb.from('user_state').select('data,updated_at').eq('user_id',me.id).maybeSingle();
+    if(error)throw error;
+    if(data&&data.data){
+      const c=data.data;
+      if(!S.orders.length&&!S.expenses.length){
+        Object.assign(S,c);
+      }else{
+        S.orders=mergeArr(S.orders,c.orders,o=>o.ts);
+        S.expenses=mergeArr(S.expenses,c.expenses,e=>e.ts);
+        S.cashOrders=mergeArr(S.cashOrders,c.cashOrders,o=>o.ts);
+        S.cashSettled=mergeArr(S.cashSettled,c.cashSettled,o=>o.ts);
+        S.savings=mergeArr(S.savings,c.savings,s=>s.date+'|'+s.amt);
+        S.badges=[...new Set([...(S.badges||[]),...(c.badges||[])])];
+        S.challengeClaimed=[...new Set([...(S.challengeClaimed||[]),...(c.challengeClaimed||[])])];
+        S.xp=Math.max(S.xp||0,c.xp||0);S.coins=Math.max(S.coins||0,c.coins||0);S.streak=Math.max(S.streak||0,c.streak||0);
+        if((c.lastActive||'')>(S.lastActive||''))S.lastActive=c.lastActive;
+        if(!S.weekGoal)S.weekGoal=c.weekGoal||S.weekGoal;
+        if(!S.savGoal||S.savGoal===100000)S.savGoal=c.savGoal||S.savGoal;
+      }
+      save();renderAll();toast('☁️ Cuenta sincronizada');
+    }
+    cloudPushState(true);
+  }catch(e){/* sin conexión o tabla no disponible todavía: sigue funcionando local */}
+}
+async function cloudPushState(force){
+  if(!sb||!me||(pushingState&&!force))return;pushingState=true;
+  try{await sb.from('user_state').upsert({user_id:me.id,data:stateForSync(),updated_at:new Date().toISOString()})}catch(e){}
+  pushingState=false;
+}
 async function upEvidence(dataURL){
   const blob=await(await fetch(dataURL)).blob();
   const path=me.id+'/'+Date.now()+'.jpg';
@@ -1492,7 +1549,6 @@ if(/iPhone|iPad|iPod/.test(navigator.userAgent)&&!matchMedia('(display-mode: sta
   $('installBtn').onclick=()=>{openModal('<h3 style="margin-bottom:10px">📲 Instalar en iPhone</h3><div style="font-size:14px;line-height:1.8">1. Tocá el botón <b>Compartir</b> (cuadrado con flecha) abajo en Safari<br>2. Elegí <b>"Agregar a pantalla de inicio"</b><br>3. Tocá <b>Agregar</b></div><button class="btn" style="width:100%;margin-top:14px" onclick="closeModal()">Entendido</button>');};
 }
 $('oImgBtn').onclick=()=>{
-  if(!hasAI())return toast('🔐 Cargá tu key gratis de Gemini en Ajustes');
   $('oImg').click();
 };
 $('oImg').onchange=async()=>{
